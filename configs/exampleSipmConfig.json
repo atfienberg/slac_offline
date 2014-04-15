@@ -22,6 +22,6 @@
     "fit_start"    :390,
     "fit_length"   :30,
     "separate_baseline_fit" : false,
-    "draw"         :true,
+    "draw"         :false
     }
 }
