@@ -222,12 +222,12 @@ double pulseFitter::fitPulse(float* const trace, double error,
   wasValid = fitRes.IsValid();
 
   chi2 = fitRes.Chi2()/fitRes.Ndf();
+  waveform->SetParameters(fitRes.GetParams());
 
   //for outputting and drawing (for debugging purposes)
   if(drawFit){
     TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), xPoints, trace,NULL,NULL);
     TFile* outf = new TFile("fitTrace.root","recreate");
-    waveform->SetParameters(fitRes.GetParams());
     fitRes.Print(cout);
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
