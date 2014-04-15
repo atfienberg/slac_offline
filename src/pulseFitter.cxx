@@ -195,23 +195,29 @@ double pulseFitter::fitPulse(float* const trace, double error,
   func.setError(error);  
 
   for(int i = 0; i<func.getNParameters(); ++i){
-    if(freeParameter[i]){
+    if((i!=1)&&freeParameter[i]){
       f.Config().ParSettings(i).Set(parNames[i].c_str(),
 				    initialParGuesses[i],
 				    parSteps[i],
 				    parMins[i],
 				    parMaxes[i]);
     }
+    else if(i==1){
+      if(isSingleFit){
+	f.Config().ParSettings(1).Set("Delta T",0);
+      }
+      else{
+	f.Config().ParSettings(i).Release();
+	f.Config().ParSettings(i).Set(parNames[i].c_str(),
+				      initialParGuesses[i],
+				      parSteps[i],
+				      parMins[i],
+				      parMaxes[i]);
+      }
+    }
     else{
       f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
     }      
-  }
-
-  
-  
-  if(!isSingleFit){
-   f.Config().ParSettings(1).Release();
-   f.Config().ParSettings(1).Set("Delta T",3,.1,0.1,20);
   }
 
   f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true);

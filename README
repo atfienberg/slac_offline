@@ -17,7 +17,8 @@ clip_cut_high & clip_cut_low: any digitizer sample whose value is not between cl
 and clip_cut_low will not be included in the fit. 
 
 free_parameter: whether this parameter will be varied in the minimization procedure. The second parameter
-should always be delta t (for double pulse fits). More on that later.
+should always be delta t (for double pulse fits). It will always be fixed if you call fitSingle()
+and it will always be free if you call fitDouble().
 
 separate_baseline_fit: whether the baseline is fit at the same time as the pulse or fit
 separately looking at a sample of trace before the defined fit_start of length fit_length
@@ -37,8 +38,8 @@ The array must be at least as long as the trace_length specified in the config f
 fitSingle(trace, error) will do the same as above but assign each sample an error specified in the function
 call. The default is one if you don't specify.
 
-fitDouble(trace, error) is for fitting double pulses. I don't recommend using it right now as I haven't finished
-implementing it and it still has some hard coded parameters that aren't guaranteed to work.
+fitDouble(trace, error) is for fitting double pulses. It will free the Delta T
+parameter and attempt to fit for two pulses.
 
 After doing a fit, you can call the following functions to access fit results. 
 Do not call any of these without doing a fit first.
