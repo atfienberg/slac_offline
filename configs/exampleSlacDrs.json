@@ -3,10 +3,7 @@
     "sample_rate"        :5.0,
     "trace_length"       :1024,
     "clip_cut_high"      :60000,
-    "clip_cut_low"       :15,
-    "noise_factor"       :5,
-    "baseline_offset"    :50,
-    "baseline_jitter"    :2
+    "clip_cut_low"       :15
     },
   
   "fit_specs": {

@@ -81,7 +81,7 @@ pulseFitFunction::pulseFitFunction(char* config):
   traceLength = digConfig.get<int>("trace_length");
   clipCutHigh = digConfig.get<int>("clip_cut_high");
   clipCutLow = digConfig.get<int>("clip_cut_low");
-  isDoubleFit = fitConfig.get<bool>("separate_baseline_fit");
+  separateBaselineFit = fitConfig.get<bool>("separate_baseline_fit");
 
   for(int i = 0; i<nParameters;++i){
     lpg.push_back(0);
@@ -233,7 +233,6 @@ double pulseFitter::fitPulse(float* const trace, double error,
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
       cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      // cout << "Amplitude: " << getMaximum() << endl;
       cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
     }
     
