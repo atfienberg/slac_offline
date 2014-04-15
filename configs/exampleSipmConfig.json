@@ -23,7 +23,5 @@
     "fit_length"   :30,
     "separate_baseline_fit" : false,
     "draw"         :true,
-    "sipm_ramp"    :2.0,
-    "sipm_decay"   :4.0
     }
 }
