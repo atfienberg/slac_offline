@@ -102,6 +102,7 @@ pulseFitFunction::~pulseFitFunction(){
 pulseFitter::pulseFitter(char* config):
   func(config),
   f(),
+  xPoints(0),
   initialParGuesses(0),
   parSteps(0),
   parMins(0),
@@ -112,6 +113,7 @@ pulseFitter::pulseFitter(char* config):
   
   pulseFitStart = func.getPulseFitStart();
   fitLength = func.getFitLength();
+  xPoints.resize(func.getTraceLength());
   for(int i = 0; i<func.getTraceLength(); ++i){
     xPoints[i] = static_cast<float>(i);
   }
@@ -232,7 +234,7 @@ double pulseFitter::fitPulse(float* const trace, double error,
 
   //for outputting and drawing (for debugging purposes)
   if(drawFit){
-    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), xPoints, trace,NULL,NULL);
+    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL);
     TFile* outf = new TFile("fitTrace.root","recreate");
     fitRes.Print(cout);
     if(isSingleFit){
@@ -503,7 +505,7 @@ void pulseFitFunction::findBaseline(){
   int effectiveFitLength = fitLength;
   double runningSum = 0;
   for(int i = 0; i <fitLength; ++i){
-    int thisIndex = pulseFitStart-fitLength-10+i; 
+    int thisIndex= pulseFitStart-fitLength-10+i; 
     if(thisIndex>=0&&thisIndex<=traceLength)
       runningSum = runningSum + currentTrace[thisIndex];
     else

@@ -114,7 +114,7 @@ private:
   double fitPulse(float* const trace, double error, 
 		  bool isSingleFit);
 
-  float xPoints[1024];
+  std::vector<float> xPoints;
   int pulseFitStart, fitLength;
 
   bool drawFit;
