@@ -10,6 +10,14 @@ $(TARGET): $(OBJECTS)
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
+exampleKazFitter: objects/pulseFitter.o objects/exampleKazFitter.o
+	@echo Linking $@
+	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
+
+objects/exampleKazFitter.o: src/otherExecutables/exampleKazFitter.cxx
+	@echo Building $@
+	$(CC) $(CFLAGS) $< -c -o $@
+
 objects/%.o: src/%.cxx
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@

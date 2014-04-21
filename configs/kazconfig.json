@@ -1,0 +1,22 @@
+{
+  "digitizer_specs": {
+    "sample_rate"        :5.0,
+    "trace_length"       :1024,
+    "clip_cut_high"      :60000,
+    "clip_cut_low"       :15
+    },
+  
+  "fit_specs": {
+    "n_parameters"      :    5,	 	
+    "parameter_names"   : ["time", "Delta T","Light Width","Decay Constant","Ramp Constant"],
+    "free_parameter"    : [true, false, true, false, false],
+    "parameter_guesses" : [130.0 ,0.0 ,10, 5.72, 3.82],
+    "parameter_steps"   : [0.1, 0.1, 0.1, 0.1,0.1],
+    "parameter_mins"    : [100, 0.1, 6.0, 1,1],
+    "parameter_maxes"   : [150, 20, 20.0, 40,10],
+    "fit_start"         :100,
+    "fit_length"        :50,
+    "separate_baseline_fit"   : true,
+    "draw"              :true
+    }
+}
