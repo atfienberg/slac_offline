@@ -9,6 +9,8 @@ class for fitting traces
 #include "TF1.h"
 #include "Math/WrappedMultiTF1.h"
 #include "Fit/Fitter.h"
+#include "TFile.h"
+#include "TSpline.h"
 #include <vector>
 #include <string>
 
@@ -17,7 +19,7 @@ class for fitting traces
 */
 class pulseFitFunction {
 public:
-  pulseFitFunction(char* config);
+  pulseFitFunction(char* config, bool templateFit);
   ~pulseFitFunction();
   double operator() (double* x, double* p);
   double operator() (const double* p);
@@ -68,6 +70,11 @@ private:
   int clipCutHigh;
   int clipCutLow;
   int nPoints; //number of points used in the fit
+
+  TFile* templateFile;
+  TSpline3* templateSpline;
+  double templateLength = 150.0;
+
 };
 
   
@@ -76,7 +83,7 @@ private:
 */
 class pulseFitter{
 public:
-  pulseFitter(char* config);
+  pulseFitter(char* config, bool templateFit = false);
   ~pulseFitter();
   
   /*attempts to fit trace with a single pulse.

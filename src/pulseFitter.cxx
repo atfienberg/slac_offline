@@ -14,6 +14,7 @@ Implementation for pulseFitter classes
 #include "TH1F.h"
 #include "TAxis.h"
 #include "TFile.h"
+#include "TSpline.h"
 #include "TFitResult.h"
 #include "TCanvas.h"
 #include "TSystem.h"
@@ -64,8 +65,17 @@ double pulseFitFunction::evalPulse(double t, double t0){
   return (term1+term2);
 }
 
+/*
+//template fit
+double pulseFitFunction::evalPulse(double t, double t0){
+  if((t-t0)>0&&(t-t0)<templateLength)
+    return templateSpline->Eval(t-t0);
+  else
+    return 0;
+}
+*/
 
-pulseFitFunction::pulseFitFunction(char* config):
+pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   lpg(),
   isGoodPoint()
 {
@@ -94,13 +104,27 @@ pulseFitFunction::pulseFitFunction(char* config):
   scale = 0;
   baseline = 0;
   
+  if(templateFit){
+    templateFile = new TFile("templateStuff/template.root");
+    templateSpline = (TSpline3*)templateFile->Get("masterSpline");
+  }
+  else{
+    templateFile = NULL;
+    templateSpline = NULL;
+  }
 }
+
 
 pulseFitFunction::~pulseFitFunction(){
+  if(templateFile!=NULL){
+    delete templateSpline;
+    templateFile->Close();
+    delete templateFile;
+  }
 }
 
-pulseFitter::pulseFitter(char* config):
-  func(config),
+pulseFitter::pulseFitter(char* config, bool templateFit):
+  func(config, templateFit),
   f(),
   xPoints(0),
   initialParGuesses(0),
