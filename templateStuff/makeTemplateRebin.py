@@ -26,9 +26,13 @@ def correctBaseline(trace):
         sys.exit(1)
     baseline = float(sum(trace[mindex-bufferZone-fitLength:mindex-bufferZone]))/fitLength
     shiftedTrace = trace[mindex-40:mindex+TEMPLATELENGTH-40]
+
+    #make sure the array isn't too short, if it is toss it
+    if len(shiftedTrace)<TEMPLATELENGTH:
+        return [0]*TEMPLATELENGTH
     return map(lambda x: (x-baseline)/(m-baseline),shiftedTrace)
 
-TEMPLATELENGTH  = 150    
+TEMPLATELENGTH  = 500    
 NBINSPSEUDOTIME = 2000
 NTIMEBINS = 1
 REBIN = true
@@ -76,7 +80,7 @@ def main():
         thisSlice = int(realTime*NTIMEBINS)
         if thisSlice == NTIMEBINS: thisSlice-=1
         ctrace = correctBaseline(trace)
-        timeslices[thisSlice] = [timeslices[thisSlice][i]+ctrace[i] for i in range(0,TEMPLATELENGTH)]    
+        timeslices[thisSlice] = [timeslices[thisSlice][j]+ctrace[j] for j in range(0,TEMPLATELENGTH)]    
 
     #rebin timeslices if neccesary
     rebinFactor = 1
@@ -87,6 +91,10 @@ def main():
             rtimeslices[i] = [(timeslices[i][j]+timeslices[i][j+1])/2 for j in range(0,TEMPLATELENGTH,2)]
             timeslices[i] = rtimeslices[i]
     
+    #normalize timeslices
+    for i in range(0,NTIMEBINS):
+        integral = sum(timeslices[i])
+        timeslices[i] = map(lambda x: x/integral,timeslices[i])
 
     #build master template and output results 
     masterTemplate = [0]*(NTIMEBINS*TEMPLATELENGTH/rebinFactor)
