@@ -38,7 +38,7 @@ def correctBaseline(trace):
 
 TEMPLATELENGTH  = 200    
 NBINSPSEUDOTIME = 500
-NTIMEBINS = 10
+NTIMEBINS = 20
 REBIN = False
 def main():
     start_time = time.time()
@@ -66,7 +66,7 @@ def main():
     pseudoTimes = np.zeros(tree.GetEntries(),dtype=np.float)
     for i in xrange(0,tree.GetEntries()):
         tree.GetEntry(i)
-        trace = np.array([sis.trace[j] for j in xrange(1024)], dtype=np.float) 
+        trace = np.array([sis.trace[j] for j in xrange(1024*3,1024*3+1024)], dtype=np.float) 
         pseudoTimes[i]=getPseudoTime(trace)
         pseudoTimesHist.Fill(pseudoTimes[i])
         if i % 1000 == 0:
@@ -90,7 +90,7 @@ def main():
     timeslices = np.zeros((NTIMEBINS,TEMPLATELENGTH))
     for i in xrange(0,tree.GetEntries()):
         tree.GetEntry(i)
-        trace = np.array([sis.trace[j] for j in xrange(1024)],dtype=np.float) 
+        trace = np.array([sis.trace[j] for j in xrange(1024*3,1024*3+1024)],dtype=np.float) 
         realTime = rtSpline.Eval(pseudoTimes[i])
         #find which timeslice this trace belongs in
         thisSlice = int(realTime*NTIMEBINS)
@@ -124,7 +124,7 @@ def main():
     outf = TFile("structtemplate.root","recreate")
     masterGraph = TGraph(NTIMEBINS*TEMPLATELENGTH/rebinFactor,
                          np.array([i*1.0*rebinFactor/NTIMEBINS 
-                                    for i in xrange(0,TEMPLATELENGTH*NTIMEBINS/rebinFactor)],dtype=np), 
+                                    for i in xrange(0,TEMPLATELENGTH*NTIMEBINS/rebinFactor)],dtype=np.float), 
            masterTemplate)
     masterGraph.Draw("ap")
     spline = TSpline3("master spline", masterGraph)
@@ -134,7 +134,7 @@ def main():
     spline.Write()
     plt.plot(np.array([i*1.0*rebinFactor/NTIMEBINS 
                                     for i in xrange(0,TEMPLATELENGTH*NTIMEBINS/rebinFactor)],dtype=np.float),
-             masterTemplate,)
+             masterTemplate)
     plt.xlabel('Time [2.0 ns]',x=1,horizontalalignment='right')
     plt.grid(True)
     plt.savefig('poleZeroTemplate.pdf',format='pdf')
