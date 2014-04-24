@@ -38,8 +38,8 @@ def correctBaseline(trace):
 
 TEMPLATELENGTH  = 200    
 NBINSPSEUDOTIME = 500
-NTIMEBINS = 1
-REBIN = True
+NTIMEBINS = 10
+REBIN = False
 def main():
     start_time = time.time()
     if len(sys.argv) != 2:
@@ -47,16 +47,26 @@ def main():
         sys.exit(1)
     
     #read in file
+    gROOT.ProcessLine(\
+        "struct s_sis{\
+         unsigned long timestamp[8];\
+         unsigned short trace[8*1024];\
+         unsigned short is_bad_event;\
+    };")
+    from ROOT import s_sis
+    
+    sis = s_sis()
     infile = TFile(sys.argv[1])
-    tree = infile.Get("WFDTree")
-    trace = np.zeros(1024,dtype='H')
-    tree.SetBranchAddress("Channel1",trace)
+    tree = infile.Get("t")
+    tree.SetBranchAddress("sis",AddressOf(sis, "timestamp"))
+    trace = np.zeros(1024,dtype=np.uint16)
     
     #evaluate pseudotimes
     pseudoTimesHist = TH1D("ptimes","ptimes",NBINSPSEUDOTIME,0,1)
     pseudoTimes = np.zeros(tree.GetEntries(),dtype=np.float)
     for i in xrange(0,tree.GetEntries()):
         tree.GetEntry(i)
+        trace = np.array([sis.trace[j] for j in xrange(1024)], dtype=np.float) 
         pseudoTimes[i]=getPseudoTime(trace)
         pseudoTimesHist.Fill(pseudoTimes[i])
         if i % 1000 == 0:
@@ -80,6 +90,7 @@ def main():
     timeslices = np.zeros((NTIMEBINS,TEMPLATELENGTH))
     for i in xrange(0,tree.GetEntries()):
         tree.GetEntry(i)
+        trace = np.array([sis.trace[j] for j in xrange(1024)],dtype=np.float) 
         realTime = rtSpline.Eval(pseudoTimes[i])
         #find which timeslice this trace belongs in
         thisSlice = int(realTime*NTIMEBINS)
@@ -113,8 +124,8 @@ def main():
     outf = TFile("structtemplate.root","recreate")
     masterGraph = TGraph(NTIMEBINS*TEMPLATELENGTH/rebinFactor,
                          np.array([i*1.0*rebinFactor/NTIMEBINS 
-                                    for i in xrange(0,TEMPLATELENGTH*NTIMEBINS/rebinFactor)],dtype=np.float),
-                         masterTemplate)
+                                    for i in xrange(0,TEMPLATELENGTH*NTIMEBINS/rebinFactor)],dtype=np), 
+           masterTemplate)
     masterGraph.Draw("ap")
     spline = TSpline3("master spline", masterGraph)
     spline.SetName("masterSpline")
