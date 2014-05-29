@@ -109,6 +109,9 @@ int main(int argc, char* argv[]) {
   cout << "Populating timeslices... " << endl;
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
+    if(summaries[i].bad){
+      continue;
+    }
     double realTime = rtSpline.Eval(summaries[i].pseudoTime);
     int thisSlice = static_cast<int>(realTime*NTIMEBINS);
     if(thisSlice == NTIMEBINS) --thisSlice;
@@ -149,7 +152,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf("testOutput.root","recreate");
+  TFile outf("fuzzyTemplateOut.root","recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();
