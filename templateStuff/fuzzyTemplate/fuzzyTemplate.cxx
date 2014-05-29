@@ -6,6 +6,7 @@ code for generating "fuzzy templates" based on digitized datasets
 
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 #include "TSystem.h"
 #include "TTree.h"
@@ -22,7 +23,7 @@ using namespace std;
 const int TEMPLATELENGTH = 200;
 const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 20;
-const int STRUCKCHANNEL = 6;
+const int DEFAULTSTRUCKCHANNEL = 6;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
 const int BUFFERZONE = 40;
@@ -50,9 +51,14 @@ int main(int argc, char* argv[]) {
   clock_t t1,t2;
   t1 = clock();
   
-  if(argc!=2){
+  if(argc<2){
     cout << "need to input datafile." << endl;
     return -1;
+  }
+  
+  int struckChannel = DEFAULTSTRUCKCHANNEL;
+  if(argc == 3){
+    struckChannel = atoi(argv[2]);
   }
   
   //read input file
@@ -69,7 +75,7 @@ int main(int argc, char* argv[]) {
   TH1D normalizedMaxes("maxes","maxes",100,0.0,0.0);
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
-    summaries[i] = processTrace(s.trace[STRUCKCHANNEL]);
+    summaries[i] = processTrace(s.trace[struckChannel]);
     pseudoTimesHist.Fill(summaries[i].pseudoTime);
     normalizedMaxes.Fill(summaries[i].normalizedAmpl);
     if(i % 1000 == 0){
@@ -92,12 +98,13 @@ int main(int argc, char* argv[]) {
 			pseudoTimesHist.Integral(1,i+1));
   }
   TSpline3 rtSpline = TSpline3("realTimeSpline",&realTimes);
+  rtSpline.SetName("realTimeSpline");
   
   //fill the timeslices and make the master fuzzy template
   TH2D masterFuzzyTemplate = TH2D("masterFuzzy", "Fuzzy Template", 
 			     TEMPLATELENGTH*NTIMEBINS, 0, TEMPLATELENGTH,
 				  400,-.2*binRangeMax,binRangeMax);
-  //double timeSlices[NTIMEBINS][TEMPLATELENGTH];
+
   vector< vector<double> > timeSlices(NTIMEBINS, vector<double>(TEMPLATELENGTH, 0));
   cout << "Populating timeslices... " << endl;
   for(int i = 0; i < t->GetEntries(); ++i){
@@ -105,7 +112,7 @@ int main(int argc, char* argv[]) {
     double realTime = rtSpline.Eval(summaries[i].pseudoTime);
     int thisSlice = static_cast<int>(realTime*NTIMEBINS);
     if(thisSlice == NTIMEBINS) --thisSlice;
-    double* ctrace = correctTrace(s.trace[STRUCKCHANNEL], summaries[i]);
+    double* ctrace = correctTrace(s.trace[struckChannel], summaries[i]);
     for(int j = 0; j<TEMPLATELENGTH; ++j){
       timeSlices[thisSlice][j] += ctrace[j];
       masterFuzzyTemplate.Fill(j-realTime+1, ctrace[j]);
@@ -134,6 +141,13 @@ int main(int argc, char* argv[]) {
   }
   cout << "Errors and Means Calculated" << endl;
   
+  TSpline3 masterSpline("masterSpline",&masterGraph);
+  masterSpline.SetName("masterSpline");
+  masterSpline.SetNpx(10000);
+  TSpline3 errorSpline("errorSpline",&errorGraph);
+  errorSpline.SetName("errorSpline");
+  errorSpline.SetNpx(10000);
+
   //save data
   TFile outf("testOutput.root","recreate");
   rtSpline.Write();
@@ -141,6 +155,8 @@ int main(int argc, char* argv[]) {
   masterFuzzyTemplate.Write();
   errorGraph.Write();
   masterGraph.Write();
+  masterSpline.Write();
+  errorSpline.Write();
   outf.Write();
   outf.Close();
 
