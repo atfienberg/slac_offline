@@ -39,7 +39,7 @@ def correctBaseline(trace):
 TEMPLATELENGTH  = 200    
 NBINSPSEUDOTIME = 500
 NTIMEBINS = 20
-STRUCKCHANNEL=3
+STRUCKCHANNEL=0
 def main():
     start_time = time.time()
     if len(sys.argv) != 2:
@@ -61,7 +61,7 @@ def main():
     tree.SetBranchAddress("sis",AddressOf(sis, "timestamp"))
     trace = np.zeros(1024,dtype=np.uint16)
     
-    #evaluate pseudotimes
+    #evaluate pseudotimes and find max
     pseudoTimesHist = TH1D("ptimes","ptimes",NBINSPSEUDOTIME,0,1)
     pseudoTimes = np.zeros(tree.GetEntries(),dtype=np.float)
     for i in xrange(0,tree.GetEntries()):
@@ -87,7 +87,7 @@ def main():
     c3 = TCanvas("c3")
 
     #populate timeslices and master fuzzy template
-    masterFuzzyTemplate = TH2D('masterFuzzy', 'Fuzzy Template', TEMPLATELENGTH*NTIMEBINS,0,TEMPLATELENGTH*NTIMEBINS,100,0.0,0.0)  
+    masterFuzzyTemplate = TH2D('masterFuzzy', 'Fuzzy Template', TEMPLATELENGTH*NTIMEBINS,0,TEMPLATELENGTH,500,-.2,0.6)  
     timeslices = np.zeros((NTIMEBINS,TEMPLATELENGTH))
     for i in xrange(0,tree.GetEntries()):
         tree.GetEntry(i)
@@ -102,14 +102,13 @@ def main():
             masterFuzzyTemplate.Fill(clockTick-realTime+1,value)
         if i % 1000 == 0:
             print(str(i) + " placed.")
-   # masterFuzzyTemplate.Scale(1.0/masterFuzzyTemplate.Integral("width"))
-  #  print 'Integral: %i' % masterFuzzyTemplate.Integral("width")
+
     print("Timeslices populated.")
     print("Calculating errors...")
     errors = np.empty(TEMPLATELENGTH*NTIMEBINS, dtype=np.float)
     for i in xrange(TEMPLATELENGTH*NTIMEBINS):
         xbinHist = masterFuzzyTemplate.ProjectionY("binhist",i+1,i+1)
-        xbinHist.Fit("gaus","q0")
+        xbinHist.Fit("gaus","0qs")
         errors[i] = xbinHist.GetFunction("gaus").GetParameter(2)
     print("Errors Calculated")
 
@@ -124,14 +123,17 @@ def main():
         masterTemplate[NTIMEBINS-1-i::NTIMEBINS]=timeslices[i]
             
     outf = TFile("structtemplate.root","recreate")
-    masterGraph = TGraph(NTIMEBINS*TEMPLATELENGTH,
+    masterGraph = TGraphErrors(NTIMEBINS*TEMPLATELENGTH,
                          np.array([i*1.0/NTIMEBINS 
                                     for i in xrange(0,TEMPLATELENGTH*NTIMEBINS)],dtype=np.float), 
-           masterTemplate)
+                               masterTemplate, np.zeros(NTIMEBINS*TEMPLATELENGTH),errors)
+    errorGraph = TGraph(NTIMEBINS*TEMPLATELENGTH, np.array([i*1.0/NTIMEBINS 
+                                    for i in xrange(0,TEMPLATELENGTH*NTIMEBINS)],dtype=np.float),
+                        errors)
     masterGraph.Draw("ap")
     spline = TSpline3("master spline", masterGraph)
     spline.SetName("masterSpline")
-    spline.Draw("same")
+   # spline.Draw("same")
     masterGraph.Write()
     masterFuzzyTemplate.Write()
     spline.Write()
@@ -144,6 +146,8 @@ def main():
     mf = TCanvas("mf")
     masterFuzzyTemplate.Draw("colz")
     mf.Print('fuzzyTemplate.pdf')
+    err = TCanvas("err")
+    errorGraph.Draw()
     print time.time()-start_time, "seconds"
     var = raw_input("..... ")
     outf.Close()
