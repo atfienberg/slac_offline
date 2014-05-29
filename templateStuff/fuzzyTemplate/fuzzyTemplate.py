@@ -15,7 +15,7 @@ def getPseudoTime(trace):
     #check for division by 0
     if trace[mindex]==trace[mindex+1]:
         return 1
-    return 2/np.pi*np.arctan(float((trace[mindex-1]-trace[mindex]))/
+    return = 2/np.pi*np.arctan(float((trace[mindex-1]-trace[mindex]))/
                              (trace[mindex+1]-trace[mindex]))
 
 def correctBaseline(trace):
@@ -39,7 +39,7 @@ def correctBaseline(trace):
 TEMPLATELENGTH  = 200    
 NBINSPSEUDOTIME = 500
 NTIMEBINS = 20
-STRUCKCHANNEL=0
+STRUCKCHANNEL=6
 def main():
     start_time = time.time()
     if len(sys.argv) != 2:
