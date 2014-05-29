@@ -25,7 +25,7 @@ Implementation for pulseFitter classes
 
 using namespace std;
 
-/*
+
 //lpg[2] device ramp
 //lpg[3] device decay
 //lpg[4] src ramp
@@ -49,9 +49,9 @@ double pulseFitFunction::evalPulse(double t, double t0){
 
   return pulse;  
 }
-*/
 
 
+/*
 //lpg[2] is light width
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
@@ -63,7 +63,7 @@ double pulseFitFunction::evalPulse(double t, double t0){
     erfc(((t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(1.41421*lpg[2]*lpg[4]*lpg[3]));
 
   return (term1+term2);
-}
+}*/
 
 /*
 //template fit
