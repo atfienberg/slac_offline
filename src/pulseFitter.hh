@@ -73,7 +73,8 @@ private:
 
   TFile* templateFile;
   TSpline3* templateSpline;
-  double templateLength = 150.0;
+  TSpline3* errorSpline;
+  double templateLength = 200.0;
 
 };
 

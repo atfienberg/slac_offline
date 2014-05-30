@@ -1,0 +1,22 @@
+{
+  "digitizer_specs": {
+    "sample_rate"        :5.0,
+    "trace_length"       :1024,
+    "clip_cut_high"      :60000,
+    "clip_cut_low"       :15
+    },
+  
+  "fit_specs": {
+    "n_parameters"      :   2,	 	
+    "parameter_names"   : ["time", "Delta T"],
+    "free_parameter"    : [true, false],
+    "parameter_guesses" : [183 , 0.0],
+    "parameter_steps"   : [0.1, 0.1],
+    "parameter_mins"    : [170, 0.1],
+    "parameter_maxes"   : [190, 20],
+    "fit_start"         :200,
+    "fit_length"        :60,
+    "separate_baseline_fit"   : false,
+    "draw"              :true
+    }
+}

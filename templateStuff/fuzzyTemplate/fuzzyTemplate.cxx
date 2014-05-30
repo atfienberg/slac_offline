@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
   //fill the timeslices and make the master fuzzy template
   TH2D masterFuzzyTemplate = TH2D("masterFuzzy", "Fuzzy Template", 
 			     TEMPLATELENGTH*NTIMEBINS, 0, TEMPLATELENGTH,
-				  400,-.2*binRangeMax,binRangeMax);
+				  1000,-.2*binRangeMax,binRangeMax);
 
   vector< vector<double> > timeSlices(NTIMEBINS, vector<double>(TEMPLATELENGTH, 0));
   cout << "Populating timeslices... " << endl;
@@ -132,15 +132,18 @@ int main(int argc, char* argv[]) {
   masterGraph.SetName("masterGraph");
   TGraph errorGraph(0);
   errorGraph.SetName("errorGraph");
+  TGraph errorVsMean(0);
+  errorVsMean.SetName("errorVsMean");
   for(int i = 0; i < TEMPLATELENGTH*NTIMEBINS; ++i){
     TH1D* xBinHist = masterFuzzyTemplate.ProjectionY("binhist",i+1,i+1);
-    xBinHist->Fit("gaus","0q");
     errorGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
-			xBinHist->GetFunction("gaus")->GetParameter(2));
+    			xBinHist->GetRMS());
     masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
-			 xBinHist->GetFunction("gaus")->GetParameter(1));
-    masterGraph.SetPointError(i,0,xBinHist->GetFunction("gaus")->GetParameter(2));
-    delete xBinHist;
+    			 xBinHist->GetMean());
+    masterGraph.SetPointError(i,0,xBinHist->GetRMS());
+    errorVsMean.SetPoint(i,xBinHist->GetMean(),
+    			 xBinHist->GetRMS());
+   delete xBinHist;
   }
   cout << "Errors and Means Calculated" << endl;
   
@@ -160,6 +163,7 @@ int main(int argc, char* argv[]) {
   masterGraph.Write();
   masterSpline.Write();
   errorSpline.Write();
+  errorVsMean.Write();
   outf.Write();
   outf.Close();
 

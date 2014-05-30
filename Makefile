@@ -18,6 +18,14 @@ fuzzyTemplate: objects/fuzzyTemplate.o
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
+fuzzyTemplateFitterTest: objects/pulseFitter.o objects/fuzzyTemplateFitterTest.o
+	@echo Linking $@
+	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
+
+objects/fuzzyTemplateFitterTest.o: src/otherExecutables/fuzzyTemplateFitterTest.cxx
+	@echo Building $@
+	$(CC) $(CFLAGS) $< -c -o $@
+
 objects/exampleKazFitter.o: src/otherExecutables/exampleKazFitter.cxx
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@

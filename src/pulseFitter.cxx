@@ -51,7 +51,7 @@ double pulseFitFunction::evalPulse(double t, double t0){
 }
 */
 
-
+/*
 //lpg[2] is light width
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
@@ -64,8 +64,8 @@ double pulseFitFunction::evalPulse(double t, double t0){
 
   return (term1+term2);
 }
+*/
 
-/*
 //template fit
 double pulseFitFunction::evalPulse(double t, double t0){
   if((t-t0)>0&&(t-t0)<templateLength)
@@ -73,7 +73,7 @@ double pulseFitFunction::evalPulse(double t, double t0){
   else
     return 0;
 }
-*/
+
 
 pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   lpg(),
@@ -105,11 +105,13 @@ pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   baseline = 0;
   
   if(templateFit){
-    templateFile = new TFile("templateStuff/template.root");
+    templateFile = new TFile("fuzzyTemplateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
+    errorSpline = (TSpline3*)templateFile->Get("errorSpline");
   }
   else{
     templateFile = NULL;
+    errorSpline = NULL;
     templateSpline = NULL;
   }
 }
@@ -118,6 +120,7 @@ pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
 pulseFitFunction::~pulseFitFunction(){
   if(templateFile!=NULL){
     delete templateSpline;
+    delete errorSpline;
     templateFile->Close();
     delete templateFile;
   }
@@ -264,7 +267,7 @@ double pulseFitter::fitPulse(float* const trace, double error,
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
-      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
+      // cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
       cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
     }
     
@@ -377,6 +380,8 @@ double pulseFitFunction::operator() (const double* p){
     thisPoint = currentTrace[pulseFitStart+i];
     if(isGoodPoint[i]){
       diff = thisPoint-(*this)(x,&lpg[0]);
+      // double thisError = scale*errorSpline->Eval(x[0]-lpg[0]);
+      //runningSum = runningSum + diff*diff/thisError/thisError;
       runningSum = runningSum + diff*diff/error/error;
     }
   }		       
@@ -487,8 +492,8 @@ void pulseFitFunction::updateScale(){
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
-      p[i] = currentTrace[pulseFitStart+i]-baseline;
-      t[i] = evalPulse(pulseFitStart+i, lpg[0]);
+      p[i] = (currentTrace[pulseFitStart+i]-baseline)/*/errorSpline->Eval(pulseFitStart+i-lpg[0])*/;
+      t[i] = evalPulse(pulseFitStart+i, lpg[0])/*/errorSpline->Eval(pulseFitStart+i-lpg[0])*/;
     }
     else{
       p[i] = 0;
