@@ -389,7 +389,7 @@ double pulseFitFunction::operator() (const double* p){
   return runningSum;
 }
 
-double pulseFitFunction::dotProduct(double* v1, double* v2){
+double pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v1[i]*v2[i];
@@ -397,7 +397,7 @@ double pulseFitFunction::dotProduct(double* v1, double* v2){
   return runningSum;
 }
 
-double pulseFitFunction::componentSum(double* v){
+double pulseFitFunction::componentSum(const vector<double>& v){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v[i];
@@ -422,10 +422,8 @@ int pulseFitFunction::checkPoints(){
 //this function finds values for the scales of the first and second pulses
 //that minimizes the chi^2 for the current time guesses
 void pulseFitFunction::updateScaleandPedestal(){
-  double* p = new double[fitLength];
-  double* t = new double[fitLength];
-
-  double* t2;
+  vector<double> p(fitLength);
+  vector<double> t(fitLength);
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
@@ -445,12 +443,10 @@ void pulseFitFunction::updateScaleandPedestal(){
     double g = componentSum(t);
     scale = (f*g-d*nPoints)/(g*g-a*nPoints);
     baseline = (a*f-d*g)/(a*nPoints-g*g);
-    delete p;
-    delete t;
   }
   
   else{
-    t2 = new double[fitLength];
+    vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
 	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]);
@@ -475,9 +471,6 @@ void pulseFitFunction::updateScaleandPedestal(){
     baseline = (b*b*f-a*c*f+c*d*g+a*e*h-b*(e*g+d*h))/
       (-2*b*g*h+a*h*h+b*b*nPoints+c*(g*g-a*nPoints));
 
-    delete p;
-    delete t;
-    delete t2;
   }
 }
 
@@ -485,10 +478,8 @@ void pulseFitFunction::updateScaleandPedestal(){
 //that minimizes the chi^2 for the current time guesses
 //both functions exist in meantime for testing purposes
 void pulseFitFunction::updateScale(){
-  double* p = new double[fitLength];
-  double* t = new double[fitLength];
-
-  double* t2;
+  vector<double> p(fitLength);
+  vector<double> t(fitLength);
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
@@ -503,12 +494,10 @@ void pulseFitFunction::updateScale(){
   
   if(!isDoubleFit){
     scale = dotProduct(p,t)/dotProduct(t,t);
-    delete p;
-    delete t;
   }
   
   else{
-    t2 = new double[fitLength];
+    vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
 	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]);
@@ -522,9 +511,6 @@ void pulseFitFunction::updateScale(){
     double e = dotProduct(p,t2);
     scale = (b*e-c*d)/(b*b-a*c);
     pileUpScale = (b*d-a*e)/(b*b-a*c);
-    delete p;
-    delete t;
-    delete t2;
   }
 }
 

@@ -44,8 +44,8 @@ public:
 private:
   //private helper functions
   double evalPulse(double t, double t0);
-  double dotProduct(double* v1, double* v2);
-  double componentSum(double* v);
+  double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2);
+  double componentSum(const std::vector<double>& v);
   int checkPoints();
   void updateScale();
   void findBaseline();
