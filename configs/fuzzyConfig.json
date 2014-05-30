@@ -10,12 +10,12 @@
     "n_parameters"      :   2,	 	
     "parameter_names"   : ["time", "Delta T"],
     "free_parameter"    : [true, false],
-    "parameter_guesses" : [183 , 0.0],
+    "parameter_guesses" : [163 , 0.0],
     "parameter_steps"   : [0.1, 0.1],
-    "parameter_mins"    : [170, 0.1],
-    "parameter_maxes"   : [190, 20],
-    "fit_start"         :200,
-    "fit_length"        :60,
+    "parameter_mins"    : [150, 0.1],
+    "parameter_maxes"   : [170, 20],
+    "fit_start"         :180,
+    "fit_length"        :80,
     "separate_baseline_fit"   : false,
     "draw"              :true
     }
