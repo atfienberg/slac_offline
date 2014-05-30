@@ -25,6 +25,7 @@ Implementation for pulseFitter classes
 
 using namespace std;
 
+
 /*
 //lpg[2] device ramp
 //lpg[3] device decay
@@ -48,8 +49,7 @@ double pulseFitFunction::evalPulse(double t, double t0){
   }
 
   return pulse;  
-}
-*/
+}*/
 
 /*
 //lpg[2] is light width
