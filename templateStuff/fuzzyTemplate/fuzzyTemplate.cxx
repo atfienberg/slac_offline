@@ -105,7 +105,6 @@ int main(int argc, char* argv[]) {
 			     TEMPLATELENGTH*NTIMEBINS, 0, TEMPLATELENGTH,
 				  1000,-.2*binRangeMax,binRangeMax);
 
-  vector< vector<double> > timeSlices(NTIMEBINS, vector<double>(TEMPLATELENGTH, 0));
   cout << "Populating timeslices... " << endl;
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
@@ -117,7 +116,6 @@ int main(int argc, char* argv[]) {
     if(thisSlice == NTIMEBINS) --thisSlice;
     double* ctrace = correctTrace(s.trace[struckChannel], summaries[i]);
     for(int j = 0; j<TEMPLATELENGTH; ++j){
-      timeSlices[thisSlice][j] += ctrace[j];
       masterFuzzyTemplate.Fill(j-realTime+1, ctrace[j]);
     }
     if(i % 1000 == 0){
