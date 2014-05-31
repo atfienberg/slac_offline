@@ -26,12 +26,12 @@ Implementation for pulseFitter classes
 using namespace std;
 
 
-/*
+
 //lpg[2] device ramp
 //lpg[3] device decay
 //lpg[4] src ramp
 //lpg[5] src decay
-double pulseFitFunction::evalPulse(double t, double t0){
+double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
   double pulse;
   if(t < t0){
     pulse = 0;
@@ -49,13 +49,13 @@ double pulseFitFunction::evalPulse(double t, double t0){
   }
 
   return pulse;  
-}*/
+}
 
 /*
 //lpg[2] is light width
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
-double pulseFitFunction::evalPulse(double t, double t0){
+double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
   double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))*
     erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3]));
   
@@ -66,16 +66,17 @@ double pulseFitFunction::evalPulse(double t, double t0){
 }
 */
 
+/*
 //template fit
-double pulseFitFunction::evalPulse(double t, double t0){
+double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
   if((t-t0)>0&&(t-t0)<templateLength)
     return templateSpline->Eval(t-t0);
   else
     return 0;
 }
+*/
 
-
-pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
+pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   lpg(),
   isGoodPoint()
 {
@@ -117,7 +118,7 @@ pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
 }
 
 
-pulseFitFunction::~pulseFitFunction(){
+pulseFitter::pulseFitFunction::~pulseFitFunction(){
   if(templateFile!=NULL){
     delete templateSpline;
     delete errorSpline;
@@ -321,7 +322,7 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
   return func.getSum(&floatTrace[0],start,length);
 }
 
-double pulseFitFunction::getSum(float* const trace, int start, int length){
+double pulseFitter::pulseFitFunction::getSum(float* const trace, int start, int length){
   setTrace(trace);
   if(start<0||((start+length)>getTraceLength())){
     cout << "Error in sum: invalid limits. " << endl;
@@ -335,7 +336,7 @@ double pulseFitFunction::getSum(float* const trace, int start, int length){
 }
 
 //the function used to define TF1's in root
-double pulseFitFunction::operator() (double* x, double* p){
+double pulseFitter::pulseFitFunction::operator() (double* x, double* p){
   double pulse;
  
   pulse = scale*evalPulse(x[0], p[0]);
@@ -350,7 +351,7 @@ double pulseFitFunction::operator() (double* x, double* p){
 }
 
 //the chi2 function to be minimized
-double pulseFitFunction::operator() (const double* p){
+double pulseFitter::pulseFitFunction::operator() (const double* p){
   //check if parameters have been updated
   //if they have, update the scale parameters
   bool updatedParameter = false;
@@ -380,8 +381,6 @@ double pulseFitFunction::operator() (const double* p){
     thisPoint = currentTrace[pulseFitStart+i];
     if(isGoodPoint[i]){
       diff = thisPoint-(*this)(x,&lpg[0]);
-      // double thisError = scale*errorSpline->Eval(x[0]-lpg[0]);
-      //runningSum = runningSum + diff*diff/thisError/thisError;
       runningSum = runningSum + diff*diff/error/error;
     }
   }		       
@@ -389,7 +388,7 @@ double pulseFitFunction::operator() (const double* p){
   return runningSum;
 }
 
-double pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){
+double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v1[i]*v2[i];
@@ -397,7 +396,7 @@ double pulseFitFunction::dotProduct(const vector<double>& v1, const vector<doubl
   return runningSum;
 }
 
-double pulseFitFunction::componentSum(const vector<double>& v){
+double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v[i];
@@ -405,7 +404,7 @@ double pulseFitFunction::componentSum(const vector<double>& v){
   return runningSum;
 }
 
-int pulseFitFunction::checkPoints(){
+int pulseFitter::pulseFitFunction::checkPoints(){
   int nGoodPoints = 0;
   for(int i = 0; i<fitLength; ++i){
     float thisPoint = currentTrace[i+pulseFitStart];
@@ -421,14 +420,14 @@ int pulseFitFunction::checkPoints(){
 
 //this function finds values for the scales of the first and second pulses
 //that minimizes the chi^2 for the current time guesses
-void pulseFitFunction::updateScaleandPedestal(){
+void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
   vector<double> p(fitLength);
   vector<double> t(fitLength);
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
-	p[i] = currentTrace[pulseFitStart+i];
-	t[i] = evalPulse(pulseFitStart+i, lpg[0]);
+      p[i] = currentTrace[pulseFitStart+i];
+      t[i] = evalPulse(pulseFitStart+i, lpg[0]);
     }
     else{
       p[i] = 0;
@@ -477,14 +476,14 @@ void pulseFitFunction::updateScaleandPedestal(){
 //this function finds values for the scales and pedestal of the first and second pulses
 //that minimizes the chi^2 for the current time guesses
 //both functions exist in meantime for testing purposes
-void pulseFitFunction::updateScale(){
+void pulseFitter::pulseFitFunction::updateScale(){
   vector<double> p(fitLength);
   vector<double> t(fitLength);
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
-      p[i] = (currentTrace[pulseFitStart+i]-baseline)/*/errorSpline->Eval(pulseFitStart+i-lpg[0])*/;
-      t[i] = evalPulse(pulseFitStart+i, lpg[0])/*/errorSpline->Eval(pulseFitStart+i-lpg[0])*/;
+      p[i] = (currentTrace[pulseFitStart+i]-baseline);
+      t[i] = evalPulse(pulseFitStart+i, lpg[0]);
     }
     else{
       p[i] = 0;
@@ -516,7 +515,7 @@ void pulseFitFunction::updateScale(){
 
 
 //for finding the baseline separate from the pulse
-void pulseFitFunction::findBaseline(){
+void pulseFitter::pulseFitFunction::findBaseline(){
   int effectiveFitLength = fitLength;
   double runningSum = 0;
   for(int i = 0; i <fitLength; ++i){
