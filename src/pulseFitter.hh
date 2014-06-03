@@ -24,11 +24,11 @@ public:
   
   /*attempts to fit trace with a single pulse.
     Error is the uncertainty on each point in the trace (right now this only works if all errors are the same) */
-  double fitSingle(float* const trace, double error = 1);
+  double fitSingle(double* const trace, double error = 1);
   double fitSingle(unsigned short* const trace, double error = 1);
 
   //same as above, except for a double pulse fit.
-  double fitDouble(float* const trace, double error = 1);
+  double fitDouble(double* const trace, double error = 1);
   double fitDouble(unsigned short* const trace, double error = 1);
 
 
@@ -47,7 +47,7 @@ public:
   double getMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
 
   //to get analogue sum without doing a fit first
-  double getSum(float* const trace, int start, int length);
+  double getSum(double* const trace, int start, int length);
   double getSum(unsigned short* const trace, int start, int length);
 
 private:
@@ -61,7 +61,7 @@ private:
     double operator() (const double* p);
   
     //returns number of good data points in the range
-    int setTrace(float* const trace) {currentTrace = trace; findBaseline(); return checkPoints();}
+    int setTrace(double* const trace) {currentTrace = trace; findBaseline(); return checkPoints();}
   
   
     void setDoubleFit(bool isDouble) {isDoubleFit = isDouble;}
@@ -76,7 +76,7 @@ private:
     double getBaseline() const { return baseline; }
     double getSampleRate() const { return sampleRate; }
 
-    double getSum(float* const trace, int start, int length); 
+    double getSum(double* const trace, int start, int length); 
   private:
     //private helper functions
     double evalPulse(double t, double t0);
@@ -100,7 +100,7 @@ private:
     bool separateBaselineFit;
     bool isDoubleFit;
 
-    float* currentTrace;
+    double* currentTrace;
     std::vector<bool> isGoodPoint;
     int traceLength, pulseFitStart, fitLength;
     int clipCutHigh;
@@ -116,10 +116,10 @@ private:
   pulseFitFunction func;
   ROOT::Fit::Fitter f;
 
-  double fitPulse(float* const trace, double error, 
+  double fitPulse(double* const trace, double error, 
 		  bool isSingleFit);
 
-  std::vector<float> xPoints;
+  std::vector<double> xPoints;
   int pulseFitStart, fitLength;
 
   bool drawFit;

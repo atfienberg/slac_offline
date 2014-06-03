@@ -20,7 +20,7 @@ Implementation for pulseFitter classes
 #include "TSystem.h"
 #include "Math/WrappedMultiTF1.h"
 #include <vector>
-#include <algorithm>
+
 
 
 using namespace std;
@@ -143,7 +143,7 @@ pulseFitter::pulseFitter(char* config, bool templateFit):
   fitLength = func.getFitLength();
   xPoints.resize(func.getTraceLength());
   for(int i = 0; i<func.getTraceLength(); ++i){
-    xPoints[i] = static_cast<float>(i);
+    xPoints[i] = static_cast<double>(i);
   }
   
   boost::property_tree::ptree conf;
@@ -192,34 +192,35 @@ pulseFitter::~pulseFitter(){
 }
 
 
-double pulseFitter::fitDouble(float* const trace, double error){
+double pulseFitter::fitDouble(double* const trace, double error){
   func.setDoubleFit(true);
   return fitPulse(trace,error,false);
 }
 
 double pulseFitter::fitDouble(unsigned short* const trace, double error){
-  vector<float> floatTrace(func.getTraceLength());
+  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
-    floatTrace[i] = static_cast<float>(trace[i]);
+    doubleTrace[i] = static_cast<double>(trace[i]);
   }
   func.setDoubleFit(true);
-  return fitPulse(&floatTrace[0],error,false);
+  return fitPulse(&doubleTrace[0],error,false);
 }
 
-double pulseFitter::fitSingle(float* const trace, double error){
+double pulseFitter::fitSingle(double* const trace, double error){
   func.setDoubleFit(false);
   return fitPulse(trace,error,true);
 }
+
 double pulseFitter::fitSingle(unsigned short* const trace, double error){
-  vector<float> floatTrace(func.getTraceLength());
+  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
-    floatTrace[i] = static_cast<float>(trace[i]);
+    doubleTrace[i] = static_cast<double>(trace[i]);
 }
   func.setDoubleFit(false);
-  return fitPulse(&floatTrace[0],error,true);
+  return fitPulse(&doubleTrace[0],error,true);
 }
 
-double pulseFitter::fitPulse(float* const trace, double error, 
+double pulseFitter::fitPulse(double* const trace, double error, 
 			     bool isSingleFit){
 
   func.setError(error);  
@@ -310,19 +311,19 @@ double pulseFitter::getIntegral(double start, double length) const{
   return waveform->Integral(start,start+length)-getBaseline()*length;
 }
 
-double pulseFitter::getSum(float* const trace, int start, int length){
+double pulseFitter::getSum(double* const trace, int start, int length){
   return func.getSum(trace, start, length);
 }
 
 double pulseFitter::getSum(unsigned short* const trace, int start, int length){
-  vector<float> floatTrace(func.getTraceLength());
+  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
-    floatTrace[i] = static_cast<float>(trace[i]);
+    doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&floatTrace[0],start,length);
+  return func.getSum(&doubleTrace[0],start,length);
 }
 
-double pulseFitter::pulseFitFunction::getSum(float* const trace, int start, int length){
+double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int length){
   setTrace(trace);
   if(start<0||((start+length)>getTraceLength())){
     cout << "Error in sum: invalid limits. " << endl;
@@ -407,7 +408,7 @@ double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
 int pulseFitter::pulseFitFunction::checkPoints(){
   int nGoodPoints = 0;
   for(int i = 0; i<fitLength; ++i){
-    float thisPoint = currentTrace[i+pulseFitStart];
+    double thisPoint = currentTrace[i+pulseFitStart];
     bool goodPoint = (thisPoint<clipCutHigh)&&(thisPoint>clipCutLow);
     isGoodPoint[i] = goodPoint;
     if(goodPoint)

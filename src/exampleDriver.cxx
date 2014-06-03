@@ -11,7 +11,7 @@ using namespace std;
 
 int main(){
   new TApplication("app", 0, nullptr);
-  TFile* datafile = new TFile("datafiles/exampleDatafile.root");
+  TFile* datafile = new TFile("datafiles/clippedPulses.root");
   
   TTree* tree = (TTree*) datafile->Get("t");
   float trace[1024];
@@ -24,7 +24,11 @@ int main(){
   TH1F* scaleHist = new TH1F("scaleHist", "scale", 100,0.0,0.0);
   for(int i = 0; i <tree->GetEntries(); ++i){
     tree->GetEntry(i);
-    pf.fitSingle(trace);
+    double dtrace[1024];
+    for(int i = 0; i < 1024; ++i){
+      dtrace[i] = static_cast<double>(trace[i]);
+    }
+    pf.fitSingle(dtrace);
     scaleHist->Fill(pf.getScale());
   }
   TCanvas c("c1");
