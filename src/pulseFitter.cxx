@@ -25,58 +25,6 @@ Implementation for pulseFitter classes
 
 using namespace std;
 
-
-//A convolution of two exponential ramps and decays, one for the source and one for the device
-//lpg[2] device ramp
-//lpg[3] device decay
-//lpg[4] src ramp
-//lpg[5] src decay
-double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
-  double pulse;
-  if(t < t0){
-    pulse = 0;
-  }
-  else{
-    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]);
-   
-    double term2 = exp(-1*(t-t0)/lpg[5])*lpg[5]*lpg[3]/(lpg[5]-lpg[3])/(-1*lpg[2]*lpg[3]+lpg[5]*(lpg[3]+lpg[2]));
-   
-    double term3 = exp(-1*(t-t0)*(lpg[3]+lpg[2])/lpg[3]/lpg[2])*lpg[5]*lpg[3]*lpg[2]*lpg[2]/(-1*lpg[3]*lpg[2]+lpg[5]*(lpg[3]+lpg[2]))/(lpg[4]*lpg[3]*lpg[2]-1*lpg[5]*(-1*lpg[3]*lpg[2]+lpg[4]*(lpg[3]+lpg[2])));
-
-    double term4 = exp(-1*(t-t0)*(lpg[5]+lpg[4])/lpg[5]/lpg[4])*lpg[4]*(1/(-1*lpg[5]*lpg[4]+(lpg[5]+lpg[4])*lpg[3])+lpg[2]/(-1*lpg[4]*lpg[3]*lpg[2]+lpg[5]*(-1*lpg[3]*lpg[2]+lpg[4]*(lpg[3]+lpg[2]))));
-
-    pulse = (term1 + term2 + term3 + term4);
-  }
-
-  return pulse;  
-}
-
-/*
-//A convolution of an exponential ramp and decay (device) with a gaussian (source)
-//lpg[2] is light width
-//lpg[3] is device decay constant
-//lpg[4] is device device ramp constant
-double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
-  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))*
-    erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3]));
-  
-  double term2 = -1*exp((lpg[4]+lpg[3])*(2.0*(t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(2.0*lpg[4]*lpg[4]*lpg[3]*lpg[3]))*
-    erfc(((t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(1.41421*lpg[2]*lpg[4]*lpg[3]));
-
-  return (term1+term2);
-}
-*/
-
-/*
-//template fit
-double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
-  if((t-t0)>0&&(t-t0)<templateLength)
-    return templateSpline->Eval(t-t0);
-  else
-    return 0;
-}
-*/
-
 //constructor for the pulseFitFunctionClass, must be constructed with a config file
 pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
   //read config file
@@ -112,6 +60,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
     errorSpline = NULL;
     templateSpline = NULL;
   }
+  currentFitFunction = &pulseFitter::pulseFitFunction::beamSource;
 }
 
 //Destructor to relase dynamically allocated memory
@@ -128,7 +77,6 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 pulseFitter::pulseFitter(char* config, bool templateFit):
   func(config, templateFit)
 {
-
   pulseFitStart = func.getPulseFitStart();
   fitLength = func.getFitLength();
 
@@ -177,7 +125,6 @@ pulseFitter::pulseFitter(char* config, bool templateFit):
   }
   f.Config().MinimizerOptions().SetPrintLevel(0);
   //f.Config().MinimizerOptions().SetTolerance(1);
-  
 }
 
 //pulseFitter destructor
@@ -241,7 +188,6 @@ double pulseFitter::fitSingle(unsigned short* const trace, double error){
 //function that sets initial parameters for ROOT fitter and then calls the fitter
 double pulseFitter::fitPulse(double* const trace, double error, 
 			     bool isSingleFit){
-
   func.setError(error);  
 
   //set initial parameters based on whether it is a single or a double fit. 
@@ -373,6 +319,11 @@ double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int
     runningSum = runningSum + currentTrace[start+i] - baseline;
   }
   return runningSum;
+}
+
+//ugly syntax, so it's localized here
+double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
+  return (this->*currentFitFunction)(t,t0);
 }
 
 //the function used to define TF1's in root
@@ -520,7 +471,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
 }
 
 //this function finds values for the function scales 
-//that minimizes the chi^2 for the current parameter guesses
+//that minimizes the chi^2 for the  parameter guesses
 void pulseFitter::pulseFitFunction::updateScale(){
   vector<double> p(fitLength);
   vector<double> t(fitLength);
@@ -576,3 +527,55 @@ void pulseFitter::pulseFitFunction::findBaseline(){
   }
   baseline = runningSum/effectiveFitLength;
 }
+
+
+//A convolution of two exponential ramps and decays, one for the source and one for the device
+//lpg[2] device ramp
+//lpg[3] device decay
+//lpg[4] src ramp
+//lpg[5] src decay
+double pulseFitter::pulseFitFunction::beamSource(double t, double t0){
+  double pulse;
+  if(t < t0){
+    pulse = 0;
+  }
+  else{
+    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]);
+   
+    double term2 = exp(-1*(t-t0)/lpg[5])*lpg[5]*lpg[3]/(lpg[5]-lpg[3])/(-1*lpg[2]*lpg[3]+lpg[5]*(lpg[3]+lpg[2]));
+   
+    double term3 = exp(-1*(t-t0)*(lpg[3]+lpg[2])/lpg[3]/lpg[2])*lpg[5]*lpg[3]*lpg[2]*lpg[2]/(-1*lpg[3]*lpg[2]+lpg[5]*(lpg[3]+lpg[2]))/(lpg[4]*lpg[3]*lpg[2]-1*lpg[5]*(-1*lpg[3]*lpg[2]+lpg[4]*(lpg[3]+lpg[2])));
+
+    double term4 = exp(-1*(t-t0)*(lpg[5]+lpg[4])/lpg[5]/lpg[4])*lpg[4]*(1/(-1*lpg[5]*lpg[4]+(lpg[5]+lpg[4])*lpg[3])+lpg[2]/(-1*lpg[4]*lpg[3]*lpg[2]+lpg[5]*(-1*lpg[3]*lpg[2]+lpg[4]*(lpg[3]+lpg[2]))));
+
+    pulse = (term1 + term2 + term3 + term4);
+  }
+
+  return pulse;  
+}
+
+
+//A convolution of an exponential ramp and decay (device) with a gaussian (source)
+//lpg[2] is light width
+//lpg[3] is device decay constant
+//lpg[4] is device device ramp constant
+double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
+  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))*
+    erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3]));
+  
+  double term2 = -1*exp((lpg[4]+lpg[3])*(2.0*(t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(2.0*lpg[4]*lpg[4]*lpg[3]*lpg[3]))*
+    erfc(((t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(1.41421*lpg[2]*lpg[4]*lpg[3]));
+
+  return (term1+term2);
+}
+
+
+
+//template fit
+double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
+  if((t-t0)>0&&(t-t0)<templateLength)
+    return templateSpline->Eval(t-t0);
+  else
+    return 0;
+}
+

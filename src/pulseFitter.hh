@@ -88,6 +88,14 @@ private:
     void updateScale();
     void findBaseline();
     void updateScaleandPedestal();
+    
+    //pointer to current fit function
+    double (pulseFitter::pulseFitFunction::*currentFitFunction)(double, double);
+    //pulse shape library
+    double beamSource(double t, double t0);
+    double laserSource(double t, double t0);
+    double templateFit(double t, double t0);
+    
 
     double sampleRate;
  
