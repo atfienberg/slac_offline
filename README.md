@@ -18,9 +18,14 @@ Other than the self explanatory entries, I will give special attention to the fo
 
 * free_parameter: whether this parameter will be varied in the minimization procedure. The second parameter should always be delta t (for double pulse fits). It will always be fixed if you call fitSingle() and it will always be free if you call fitDouble().
 
-* separate_baseline_fit: whether the baseline is fit at the same time as the pulse or fit separately looking at a sample of trace before the defined fit_start of length fit_length
+* separate_baseline_fit: whether the baseline is fit at the same time as the pulse or fit separately looking at a sample of trace before the defined fit_start of length base_fit_length
+
+* base_fit_length: how many points to include in the separate baseline fit
+
+* base_fit_buffer: how many points to leave between the end of the separate baseline fit region and the start of the pulse fit region
 
 * draw: true means that the fitter will show you a plot of each fit and output the fit results as well as waiting for keyboard input before proceeding.
+
 
 USING THE CLASS
 ---------------
