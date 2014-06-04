@@ -26,11 +26,12 @@ public:
     Error is the uncertainty on each point in the trace (right now this only works if all errors are the same) */
   double fitSingle(double* const trace, double error = 1);
   double fitSingle(unsigned short* const trace, double error = 1);
+  double fitSingle(float* const trace, double error = 1);
 
   //same as above, except for a double pulse fit.
   double fitDouble(double* const trace, double error = 1);
   double fitDouble(unsigned short* const trace, double error = 1);
-
+  double fitDouble(float* const trace, double error = 1);
 
   //get various fit results. Do not call these without doing a fit first
   double getNParameters() const { return func.getNParameters(); }
@@ -49,6 +50,7 @@ public:
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
   double getSum(unsigned short* const trace, int start, int length);
+  double getSum(float* const trace, int start, int length);
 
 private:
 
@@ -103,6 +105,7 @@ private:
     double* currentTrace;
     std::vector<bool> isGoodPoint;
     int traceLength, pulseFitStart, fitLength;
+    int bFitLength, bFitBuffer; //baseline fit length, baseline fit buffer 
     int clipCutHigh;
     int clipCutLow;
     int nPoints; //number of points used in the fit

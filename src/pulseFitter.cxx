@@ -88,6 +88,8 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
   nParameters = fitConfig.get<int>("n_parameters");
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
+  bFitLength = fitConfig.get<int>("base_fit_length");
+  bFitBuffer = fitConfig.get<int>("base_fit_buffer");
   traceLength = digConfig.get<int>("trace_length");
   clipCutHigh = digConfig.get<int>("clip_cut_high");
   clipCutLow = digConfig.get<int>("clip_cut_low");
@@ -200,6 +202,16 @@ double pulseFitter::fitDouble(unsigned short* const trace, double error){
   return fitPulse(&doubleTrace[0],error,false);
 }
 
+//overloaded to work with floats
+double pulseFitter::fitDouble(float* const trace, double error){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  func.setDoubleFit(true);
+  return fitPulse(&doubleTrace[0],error,false);
+}
+
 //tries to fit a single pulse
 double pulseFitter::fitSingle(double* const trace, double error){
   func.setDoubleFit(false);
@@ -207,11 +219,21 @@ double pulseFitter::fitSingle(double* const trace, double error){
 }
 
 //overloaded for unsigned shorts
+double pulseFitter::fitSingle(float* const trace, double error){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  func.setDoubleFit(false);
+  return fitPulse(&doubleTrace[0],error,true);
+}
+
+//overloaded for floats
 double pulseFitter::fitSingle(unsigned short* const trace, double error){
   vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
-}
+  }
   func.setDoubleFit(false);
   return fitPulse(&doubleTrace[0],error,true);
 }
@@ -321,6 +343,15 @@ double pulseFitter::getSum(double* const trace, int start, int length){
 
 //overloaded to work with unsigned shorts
 double pulseFitter::getSum(unsigned short* const trace, int start, int length){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  return func.getSum(&doubleTrace[0],start,length);
+}
+
+//overloaded to work with floats
+double pulseFitter::getSum(float* const trace, int start, int length){
   vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
@@ -530,13 +561,12 @@ void pulseFitter::pulseFitFunction::updateScale(){
 
 
 //for finding the baseline separate from the pulse,
-//it fits an island [pulsefitStart-fitLength-10,pulseFitStart-10)
-//the 10 is currently hardcoded
+//it fits an island [pulsefitStart-bFitLength-bFitBuffer,pulseFitStart-bFitBuffer)
 void pulseFitter::pulseFitFunction::findBaseline(){
-  int effectiveFitLength = fitLength;
+  int effectiveFitLength = bFitLength;
   double runningSum = 0;
-  for(int i = 0; i <fitLength; ++i){
-    int thisIndex= pulseFitStart-fitLength-10+i; 
+  for(int i = 0; i <bFitLength; ++i){
+    int thisIndex= pulseFitStart-bFitLength-bFitBuffer+i; 
     
     //make sure I don't try to access out of bounds 
     if(thisIndex>=0&&thisIndex<=traceLength)

@@ -26,6 +26,8 @@ int main(){
     double chi2;
     double sum;
     double baseline;
+    double time;
+    bool valid;
   } fitResults;
   
   fitResults fr;
