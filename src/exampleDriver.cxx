@@ -29,7 +29,9 @@ int main(){
       dtrace[i] = static_cast<double>(trace[i]);
     }
     pf.fitSingle(dtrace);
-    scaleHist->Fill(pf.getScale());
+    if(pf.wasValidFit()){
+      scaleHist->Fill(pf.getScale());
+    }
   }
   TCanvas c("c1");
   scaleHist->Draw();

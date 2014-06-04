@@ -26,7 +26,7 @@ Implementation for pulseFitter classes
 using namespace std;
 
 
-
+//A convolution of two exponential ramps and decays, one for the source and one for the device
 //lpg[2] device ramp
 //lpg[3] device decay
 //lpg[4] src ramp
@@ -52,6 +52,7 @@ double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
 }
 
 /*
+//A convolution of an exponential ramp and decay (device) with a gaussian (source)
 //lpg[2] is light width
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
@@ -76,10 +77,8 @@ double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
 }
 */
 
-pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
-  lpg(),
-  isGoodPoint()
-{
+//constructor for the pulseFitFunctionClass, must be constructed with a config file
+pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
   //read config file
   boost::property_tree::ptree conf;
   read_json(config, conf);
@@ -94,17 +93,13 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   clipCutLow = digConfig.get<int>("clip_cut_low");
   separateBaselineFit = fitConfig.get<bool>("separate_baseline_fit");
 
-  for(int i = 0; i<nParameters;++i){
-    lpg.push_back(0);
-  }
-  for(int i = 0; i < fitLength; ++i){
-    isGoodPoint.push_back(false);
-  }
-  
-  
+  //initialize some member variables
+  lpg.resize(nParameters);
+  isGoodPoint.resize(fitLength);  
   scale = 0;
   baseline = 0;
   
+  //If it's a template fit, read the template file
   if(templateFit){
     templateFile = new TFile("fuzzyTemplateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
@@ -117,7 +112,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit):
   }
 }
 
-
+//Destructor to relase dynamically allocated memory
 pulseFitter::pulseFitFunction::~pulseFitFunction(){
   if(templateFile!=NULL){
     delete templateSpline;
@@ -127,25 +122,21 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
   }
 }
 
+//constructor for the pulseFitter class, must be constructed with a config file
 pulseFitter::pulseFitter(char* config, bool templateFit):
-  func(config, templateFit),
-  f(),
-  xPoints(0),
-  initialParGuesses(0),
-  parSteps(0),
-  parMins(0),
-  parMaxes(0),
-  parNames(0),
-  freeParameter(0)
+  func(config, templateFit)
 {
-  
+
   pulseFitStart = func.getPulseFitStart();
   fitLength = func.getFitLength();
+
+  //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs
   xPoints.resize(func.getTraceLength());
   for(int i = 0; i<func.getTraceLength(); ++i){
     xPoints[i] = static_cast<double>(i);
   }
-  
+					       
+  //read config file
   boost::property_tree::ptree conf;
   read_json(config, conf);
   auto fitConfig = conf.get_child("fit_specs");
@@ -157,6 +148,7 @@ pulseFitter::pulseFitter(char* config, bool templateFit):
   wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1);
   f.SetFunction(*wwaveform);
 
+  //read arrays from the config file
   auto nameTree = fitConfig.get_child("parameter_names");
   for(const auto& tree : nameTree){
     parNames.push_back(tree.second.get<string>(""));
@@ -186,17 +178,19 @@ pulseFitter::pulseFitter(char* config, bool templateFit):
   
 }
 
+//pulseFitter destructor
 pulseFitter::~pulseFitter(){
   delete waveform;
   delete wwaveform;
 }
 
-
+//tries to fit a double pulse 
 double pulseFitter::fitDouble(double* const trace, double error){
   func.setDoubleFit(true);
   return fitPulse(trace,error,false);
 }
 
+//overloaded to work with unsigned shorts
 double pulseFitter::fitDouble(unsigned short* const trace, double error){
   vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
@@ -206,11 +200,13 @@ double pulseFitter::fitDouble(unsigned short* const trace, double error){
   return fitPulse(&doubleTrace[0],error,false);
 }
 
+//tries to fit a single pulse
 double pulseFitter::fitSingle(double* const trace, double error){
   func.setDoubleFit(false);
   return fitPulse(trace,error,true);
 }
 
+//overloaded for unsigned shorts
 double pulseFitter::fitSingle(unsigned short* const trace, double error){
   vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
@@ -220,11 +216,14 @@ double pulseFitter::fitSingle(unsigned short* const trace, double error){
   return fitPulse(&doubleTrace[0],error,true);
 }
 
+//function that sets initial parameters for ROOT fitter and then calls the fitter
 double pulseFitter::fitPulse(double* const trace, double error, 
 			     bool isSingleFit){
 
   func.setError(error);  
 
+  //set initial parameters based on whether it is a single or a double fit. 
+  //parameter 1 should be delta t
   for(int i = 0; i<func.getNParameters(); ++i){
     if((i!=1)&&freeParameter[i]){
       f.Config().ParSettings(i).Set(parNames[i].c_str(),
@@ -251,11 +250,12 @@ double pulseFitter::fitPulse(double* const trace, double error,
     }      
   }
 
+  //call the minimizer
   f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true);
 
-  
   ROOT::Fit::FitResult fitRes = f.Result();
 
+  //grab the results
   wasValid = fitRes.IsValid();
 
   chi2 = fitRes.Chi2()/fitRes.Ndf();
@@ -303,18 +303,23 @@ double pulseFitter::fitPulse(double* const trace, double error,
   return chi2;
 }
 
+//numerically integrate the fitted function
 double pulseFitter::getIntegral(double start, double length) const{
   if(start<0||((start+length)>func.getTraceLength())){
-    cout << "Error in integral: invalid limits. " << endl;
+    cerr << "Error in integral: invalid limits. " << endl;
     return 0;
   }
   return waveform->Integral(start,start+length)-getBaseline()*length;
 }
 
+//take the baseline corrected sum of digitized points in specified range
+//this function is a wrapper that serves to pass the trace information to
+//the pulseFitFunction
 double pulseFitter::getSum(double* const trace, int start, int length){
   return func.getSum(trace, start, length);
 }
 
+//overloaded to work with unsigned shorts
 double pulseFitter::getSum(unsigned short* const trace, int start, int length){
   vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
@@ -323,12 +328,15 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
   return func.getSum(&doubleTrace[0],start,length);
 }
 
+//this function actually executes the sum
 double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int length){
-  setTrace(trace);
+  //check the bounds
   if(start<0||((start+length)>getTraceLength())){
-    cout << "Error in sum: invalid limits. " << endl;
+    cerr << "Error in sum: invalid limits. " << endl;
     return 0;
   }
+  
+  setTrace(trace);
   double runningSum = 0;
   for(int i = 0; i < length; ++i){
     runningSum = runningSum + currentTrace[start+i] - baseline;
@@ -373,6 +381,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     }
   }
 
+  //evaluate the chi2
   double runningSum = 0;
   double diff;
   double x[1];
@@ -389,6 +398,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
   return runningSum;
 }
 
+//take a dot product of two vectors
 double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
@@ -397,6 +407,7 @@ double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const
   return runningSum;
 }
 
+//take a sum of the components of a vector
 double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
@@ -405,6 +416,8 @@ double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
   return runningSum;
 }
 
+//check that each point in the trace is within the defined limits
+//if not, flag it as as bad point
 int pulseFitter::pulseFitFunction::checkPoints(){
   int nGoodPoints = 0;
   for(int i = 0; i<fitLength; ++i){
@@ -420,9 +433,9 @@ int pulseFitter::pulseFitFunction::checkPoints(){
 
 
 //this function finds values for the scales of the first and second pulses
-//that minimizes the chi^2 for the current time guesses
+//that minimizes the chi^2 for the current parameter guesses
 void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
-  vector<double> p(fitLength);
+  vector<double> p(fitLength); 
   vector<double> t(fitLength);
 
   for(int i = 0; i < fitLength; ++i){
@@ -445,6 +458,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     baseline = (a*f-d*g)/(a*nPoints-g*g);
   }
   
+  //if it is a double pulse fit
   else{
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
@@ -474,9 +488,8 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
   }
 }
 
-//this function finds values for the scales and pedestal of the first and second pulses
-//that minimizes the chi^2 for the current time guesses
-//both functions exist in meantime for testing purposes
+//this function finds values for the function scales 
+//that minimizes the chi^2 for the current parameter guesses
 void pulseFitter::pulseFitFunction::updateScale(){
   vector<double> p(fitLength);
   vector<double> t(fitLength);
@@ -496,6 +509,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
     scale = dotProduct(p,t)/dotProduct(t,t);
   }
   
+  //if it is a double pulse fit
   else{
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
@@ -515,12 +529,16 @@ void pulseFitter::pulseFitFunction::updateScale(){
 }
 
 
-//for finding the baseline separate from the pulse
+//for finding the baseline separate from the pulse,
+//it fits an island [pulsefitStart-fitLength-10,pulseFitStart-10)
+//the 10 is currently hardcoded
 void pulseFitter::pulseFitFunction::findBaseline(){
   int effectiveFitLength = fitLength;
   double runningSum = 0;
   for(int i = 0; i <fitLength; ++i){
     int thisIndex= pulseFitStart-fitLength-10+i; 
+    
+    //make sure I don't try to access out of bounds 
     if(thisIndex>=0&&thisIndex<=traceLength)
       runningSum = runningSum + currentTrace[thisIndex];
     else

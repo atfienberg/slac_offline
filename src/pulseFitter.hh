@@ -111,9 +111,9 @@ private:
     TSpline3* templateSpline;
     TSpline3* errorSpline;
     double templateLength = 200.0;
-  };
-  
+  };  
   pulseFitFunction func;
+  
   ROOT::Fit::Fitter f;
 
   double fitPulse(double* const trace, double error, 
