@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf("fuzzyTemplateOut.root","recreate");
+  TFile outf("templateOut.root","recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();
