@@ -19,7 +19,7 @@ class for fitting traces
 */
 class pulseFitter{
 public:
-  pulseFitter(char* config, bool templateFit = false);
+  pulseFitter(char* config);
   ~pulseFitter();
   
   /*attempts to fit trace with a single pulse.
@@ -57,7 +57,7 @@ private:
   /* the function that the pulseFitter uses to fit traces (with the defined () operator)  */
   class pulseFitFunction {
   public:
-    pulseFitFunction(char* config, bool templateFit);
+    pulseFitFunction(char* config);
     ~pulseFitFunction();
     double operator() (double* x, double* p);
     double operator() (const double* p);

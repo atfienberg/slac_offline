@@ -14,6 +14,8 @@ The fitter is currently set up to work with the exampleSipmConfig.json.
 
 Other than the self explanatory entries, I will give special attention to the following:
 
+* fit_type: The type of fit to be attempted. The current options are 'laser', 'beam', and 'template'. 
+
 * clip_cut_high & clip_cut_low: any digitizer sample whose value is not between clip_cut_high and clip_cut_low will not be included in the fit. 
 
 * free_parameter: whether this parameter will be varied in the minimization procedure. The second parameter should always be delta t (for double pulse fits). It will always be fixed if you call fitSingle() and it will always be free if you call fitDouble().

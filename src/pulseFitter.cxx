@@ -20,13 +20,13 @@ Implementation for pulseFitter classes
 #include "TSystem.h"
 #include "Math/WrappedMultiTF1.h"
 #include <vector>
-
+#include <string>
 
 
 using namespace std;
 
 //constructor for the pulseFitFunctionClass, must be constructed with a config file
-pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
+pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   //read config file
   boost::property_tree::ptree conf;
   read_json(config, conf);
@@ -48,19 +48,28 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config, bool templateFit){
   isGoodPoint.resize(fitLength);  
   scale = 0;
   baseline = 0;
+  templateFile = NULL;
+  errorSpline = NULL;
+  templateSpline = NULL;
   
-  //If it's a template fit, read the template file
-  if(templateFit){
+  //determine fit type
+  string fitType = fitConfig.get<string>("fit_type");
+  if(fitType==string("beam")){
+    currentFitFunction = &pulseFitter::pulseFitFunction::beamSource;
+  }
+  else if(fitType==string("laser")){
+    currentFitFunction = &pulseFitter::pulseFitFunction::laserSource;
+  }
+  else if(fitType==string("template")){
+    currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
     templateFile = new TFile("fuzzyTemplateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
     errorSpline = (TSpline3*)templateFile->Get("errorSpline");
   }
   else{
-    templateFile = NULL;
-    errorSpline = NULL;
-    templateSpline = NULL;
+    cerr << "ERROR: " << fitType << " is in invalid fit_type." << endl;
+    exit(EXIT_FAILURE);
   }
-  currentFitFunction = &pulseFitter::pulseFitFunction::beamSource;
 }
 
 //Destructor to relase dynamically allocated memory
@@ -74,8 +83,8 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 }
 
 //constructor for the pulseFitter class, must be constructed with a config file
-pulseFitter::pulseFitter(char* config, bool templateFit):
-  func(config, templateFit)
+pulseFitter::pulseFitter(char* config):
+  func(config)
 {
   pulseFitStart = func.getPulseFitStart();
   fitLength = func.getFitLength();
@@ -528,6 +537,11 @@ void pulseFitter::pulseFitFunction::findBaseline(){
   baseline = runningSum/effectiveFitLength;
 }
 
+//
+//
+// PULSE LIBRARY
+//
+//
 
 //A convolution of two exponential ramps and decays, one for the source and one for the device
 //lpg[2] device ramp

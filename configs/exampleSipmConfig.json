@@ -7,7 +7,8 @@
     },
   
   "fit_specs": {
-    "n_parameters" :6,
+    "fit_type"          : "beam",
+    "n_parameters"      :6,
     "parameter_names"   : ["Time", "Delta T", "Device Ramp", "Device Decay", 
        "Source Ramp", "Source Decay"],	
     "free_parameter"    : [true, false, false, false, false, false],
@@ -20,6 +21,6 @@
     "base_fit_length"   :30,
     "base_fit_buffer"   :10,
     "separate_baseline_fit" : false,
-    "draw"              :false
+    "draw"              :true
     }
 }
