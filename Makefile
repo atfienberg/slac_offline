@@ -14,7 +14,7 @@ makeTemplate: objects/makeTemplate.o
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-objects/makeTemplate.o: src/otherExecultables/makeTemplate.cxx
+objects/makeTemplate.o: src/otherExecutables/makeTemplate.cxx
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@
 
