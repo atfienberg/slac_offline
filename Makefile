@@ -10,6 +10,14 @@ $(TARGET): $(OBJECTS)
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
+makeTemplate: objects/makeTemplate.o
+	@echo Linking $@
+	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
+
+objects/makeTemplate.o: src/otherExecultables/makeTemplate.cxx
+	@echo Building $@
+	$(CC) $(CFLAGS) $< -c -o $@
+
 objects/%.o: src/%.cxx
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@

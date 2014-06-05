@@ -330,6 +330,7 @@ double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int
   return runningSum;
 }
 
+//evaluates the pulse model
 //ugly syntax, so it's localized here
 double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
   return (this->*currentFitFunction)(t,t0);
