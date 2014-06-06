@@ -27,6 +27,7 @@ int main(){
     double sum;
     double baseline;
     double time;
+    double max;
     bool valid;
   } fitResults;
   
@@ -40,8 +41,9 @@ int main(){
   for(int i = 0; i <tree->GetEntries(); ++i){
     tree->GetEntry(i);
 
-    fr.sum = pf.getSum(trace,390,40);
-    
+    fr.sum = pf.getSum(trace,pf.getFitStart(),pf.getFitLength());
+    fr.max = pf.getMax(pf.getFitStart(), pf.getFitLength());
+
     pf.fitSingle(trace);
     
     fr.energy = pf.getScale();
