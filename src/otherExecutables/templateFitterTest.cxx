@@ -6,6 +6,7 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TSystem.h"
+#include <time.h>
 
 using namespace std;
 const int DEFAULTSTRUCKCHANNEL = 6;
@@ -50,7 +51,8 @@ int main(int argc, char* argv[]){
   TTree* outTree = new TTree("t","t");
   outTree->Branch("fitResults",&fr,"energy/D:chi2/D:sum/D:baseline/D");
   
-  
+  clock_t t1,t2;
+  t1 = clock();
 
   for(int i = 0; i <t->GetEntries(); ++i){
     t->GetEntry(i);
@@ -66,6 +68,10 @@ int main(int argc, char* argv[]){
       outTree->Fill();
     }
   }
+  t2 = clock();
+  float diff ((float)t2-(float)t1);
+  cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
+
   cout << outTree->GetEntries() << " successful fits" << endl;
   outTree->Write();
   outf->Write();

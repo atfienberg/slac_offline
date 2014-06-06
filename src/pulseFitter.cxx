@@ -4,13 +4,22 @@ fienberg@uw.edu
 Implementation for pulseFitter classes
 */  
 
-//mws: Your includes should have some hierarchy: <std>, "other", "project".
-//mws: There are also some things in here that are doubly included from the header.
-#include <cmath> 
+
+//project includes
 #include "pulseFitter.hh"
+
+//std includes
+#include <cmath> 
+#include <vector>
+#include <string>
+#include <algorithm>
 #include <iostream>
+
+//boost includes
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+
+//ROOT includes
 #include "TGraphErrors.h"
 #include "TF1.h"
 #include "TH1F.h"
@@ -21,24 +30,21 @@ Implementation for pulseFitter classes
 #include "TCanvas.h"
 #include "TSystem.h"
 #include "Math/WrappedMultiTF1.h"
-#include <vector>
-#include <string>
-
 
 using namespace std;
 
-//constructor for the pulseFitFunctionClass, must be constructed with a config file //mws: comments should be complete sentences if standalone. Short comments should be inline with code.
-pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ //mws: space before opening brackets is just preference. I prefer it, but do what you want.
-  //read config file
+//Constructor for the pulseFitFunctionClass:
+//must be constructed with a valid config file 
+pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ 
+
+  //read in the config file and initialize some member variables
   boost::property_tree::ptree conf;
   read_json(config, conf);
+  
   auto fitConfig = conf.get_child("fit_specs");
   auto digConfig = conf.get_child("digitizer_specs");  
 
-  //mws: Let the code breathe a little more, like separating the getting of 
-  // config files and the getting of parameters
   sampleRate = digConfig.get<double>("sample_rate");
-  double nParameters = fitConfig.get<int>("n_parameters"); //mws: Why a double?
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
   bFitLength = fitConfig.get<int>("base_fit_length");
@@ -48,38 +54,44 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ //mws: space befo
   clipCutLow = digConfig.get<int>("clip_cut_low");
   separateBaselineFit = fitConfig.get<bool>("separate_baseline_fit");
 
-  //initialize some member variables
-  lpg.resize(nParameters);
+  //resize member vectors
+  lpg.resize(fitConfig.get<int>("n_parameters")); 
   isGoodPoint.resize(fitLength);  
+  
   scale = 0;
   baseline = 0;
   templateFile = NULL;
   errorSpline = NULL;
   templateSpline = NULL;
   
-  //determine fit type
+  //determine fit type and assign fit function accordingly
   string fitType = fitConfig.get<string>("fit_type");
-  if(fitType==string("beam")){ //mws: space on both sides of operators and after control statements
-    currentFitFunction = &pulseFitter::pulseFitFunction::beamSource; //mws: generally a good idea to add lines in control structures for readability
+
+  if (fitType == string("beam")){
+    currentFitFunction = &pulseFitter::pulseFitFunction::beamSource; 
   }
-  else if(fitType==string("laser")){ //mws: space
+
+  else if (fitType == string("laser")){ 
     currentFitFunction = &pulseFitter::pulseFitFunction::laserSource;
   }
-  else if(fitType==string("template")){
+
+  else if (fitType == string("template")){
     currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
     templateFile = new TFile("templateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
     errorSpline = (TSpline3*)templateFile->Get("errorSpline");
   }
-  else{
+  
+  else {
     cerr << "ERROR: " << fitType << " is in invalid fit_type." << endl;
     exit(EXIT_FAILURE);
   }
-}
+
+} //end pulseFitFunction constructor 
 
 //Destructor to relase dynamically allocated memory
 pulseFitter::pulseFitFunction::~pulseFitFunction(){
-  if(templateFile!=NULL){ 
+  if (templateFile!=NULL){ 
     delete templateSpline;
     delete errorSpline;
     templateFile->Close();
@@ -91,55 +103,70 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 pulseFitter::pulseFitter(char* config):
   func(config)
 {
-  pulseFitStart = func.getPulseFitStart();
+  pulseFitStart = func.getFitStart();
   fitLength = func.getFitLength();
 
-  //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs //mws: keep lines to 80 characeters max
+  //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs 
   xPoints.resize(func.getTraceLength());
-  for(int i = 0; i<func.getTraceLength(); ++i){ //mws: space
+  for(int i = 0; i<func.getTraceLength(); ++i){ 
     xPoints[i] = static_cast<double>(i);
   }
+
+  //resize doubleTrace
+  doubleTrace.resize(func.getTraceLength());
 					       
   //read config file
   boost::property_tree::ptree conf;
   read_json(config, conf);
+
   auto fitConfig = conf.get_child("fit_specs");
   drawFit = fitConfig.get<bool>("draw");
 
-  waveform = new TF1("fit", &func, 0, func.getTraceLength(), func.getNParameters()); //mws: line length
- 
+  //initialize ROOT functions and configure the fitter
+  waveform = new TF1("fit", 
+		     &func, 
+		     0, 
+		     func.getTraceLength(), 
+		     func.getNParameters());  
+  
   waveform->SetNpx(10000);
-  wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1); //mws: space after commas
+  wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1); 
+  
   f.SetFunction(*wwaveform);
+  f.Config().MinimizerOptions().SetPrintLevel(0);
+  //f.Config().MinimizerOptions().SetTolerance(1);
 
   //read arrays from the config file
   auto nameTree = fitConfig.get_child("parameter_names");
   for(const auto& tree : nameTree){
     parNames.push_back(tree.second.get<string>(""));
   }
+
   auto guessTree = fitConfig.get_child("parameter_guesses");
   for(const auto& tree : guessTree){
     initialParGuesses.push_back(tree.second.get<double>(""));
   }
+  
   auto stepTree = fitConfig.get_child("parameter_steps");
   for(const auto& tree : stepTree){
     parSteps.push_back(tree.second.get<double>(""));
   }
- auto minTree = fitConfig.get_child("parameter_mins");
+
+  auto minTree = fitConfig.get_child("parameter_mins");
   for(const auto& tree : minTree){
     parMins.push_back(tree.second.get<double>(""));
   }
+  
   auto maxTree = fitConfig.get_child("parameter_maxes");
   for(const auto& tree : maxTree){
     parMaxes.push_back(tree.second.get<double>(""));
   }
+  
   auto fixedTree = fitConfig.get_child("free_parameter");
   for(const auto& tree : fixedTree){
     freeParameter.push_back(tree.second.get<bool>(""));
   }
-  f.Config().MinimizerOptions().SetPrintLevel(0);
-  //f.Config().MinimizerOptions().SetTolerance(1);
-}
+} //end pulseFitter constructor
 
 //pulseFitter destructor
 pulseFitter::~pulseFitter(){
@@ -150,74 +177,75 @@ pulseFitter::~pulseFitter(){
 //tries to fit a double pulse 
 double pulseFitter::fitDouble(double* const trace, double error){
   func.setDoubleFit(true);
-  return fitPulse(trace,error,false);
+  return fitPulse(trace, error, false);
 }
 
 //overloaded to work with unsigned shorts
 double pulseFitter::fitDouble(unsigned short* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
-  for(int i = 0; i < func.getTraceLength(); ++i){
+  for (int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
+  
   func.setDoubleFit(true);
-  return fitPulse(&doubleTrace[0],error,false); //mws: space
+  return fitPulse(&doubleTrace[0], error, false); 
 }
 
 //overloaded to work with floats
 double pulseFitter::fitDouble(float* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
+  
   func.setDoubleFit(true);
-  return fitPulse(&doubleTrace[0],error,false); //mws: space
+  return fitPulse(&doubleTrace[0], error, false); 
 }
 
 //tries to fit a single pulse
 double pulseFitter::fitSingle(double* const trace, double error){
   func.setDoubleFit(false);
-  return fitPulse(trace,error,true); //mws: space
+  return fitPulse(trace, error, true); 
 }
 
 //overloaded for unsigned shorts
 double pulseFitter::fitSingle(float* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
+  
   func.setDoubleFit(false);
-  return fitPulse(&doubleTrace[0],error,true); //mws: space
+  return fitPulse(&doubleTrace[0], error, true); 
 }
 
 //overloaded for floats
 double pulseFitter::fitSingle(unsigned short* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
+  
   func.setDoubleFit(false);
-  return fitPulse(&doubleTrace[0],error,true); //mws: space
+  return fitPulse(&doubleTrace[0], error, true); 
 }
 
-//function that sets initial parameters for ROOT fitter and then calls the fitter //mws: line length
+//function that sets initial parameters for ROOT fitter and then calls the fitter
 double pulseFitter::fitPulse(double* const trace, double error, 
-			     bool isSingleFit){ //mws: for lines like this indent each argument
+			     bool isSingleFit){ 
   func.setError(error);  
 
-  //set initial parameters based on whether it is a single or a double fit. 
-  //parameter 1 should be delta t
+  //loop over each function parameter for initial configuration
   for(int i = 0; i<func.getNParameters(); ++i){
-    if((i!=1)&&freeParameter[i]){ //mws: space
+    if((i!=1)&&freeParameter[i]){ 
       f.Config().ParSettings(i).Set(parNames[i].c_str(),
 				    initialParGuesses[i],
 				    parSteps[i],
 				    parMins[i],
 				    parMaxes[i]);
-    }
-    else if(i==1){ //mws: space
+    } //configure each free parameter that is not parameter_1 (delta T)
+    
+    else if (i == 1){ 
       if(isSingleFit){
 	f.Config().ParSettings(1).Set("Delta T",0);
-      }
+      }//fix delta t to 0 if it's a single fit
+
       else{
 	f.Config().ParSettings(i).Release();
 	f.Config().ParSettings(i).Set(parNames[i].c_str(),
@@ -225,34 +253,45 @@ double pulseFitter::fitPulse(double* const trace, double error,
 				      parSteps[i],
 				      parMins[i],
 				      parMaxes[i]);
-      }
+      }//configure delta t if it's a double fit
     }
+    
     else{
-      f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);//mws: space
-    }      
-  } //mws: That whole control structure could use some extra lines for readability
+      f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
+    }//configure each fixed parameter      
+
+  }//end loop over parameters to be configured
+  
+  //connect the function to the trace
+  int nPoints = func.setTrace(trace);
+  if(func.isSeparateBaselineFit()){
+    func.findBaseline();
+  }
 
   //call the minimizer
-  f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true); //mws: space
-
-  ROOT::Fit::FitResult fitRes = f.Result();
+  f.FitFCN(func.getNParameters(),func,0,nPoints,true);
 
   //grab the results
+  ROOT::Fit::FitResult fitRes = f.Result();
   wasValid = fitRes.IsValid();
 
   chi2 = fitRes.Chi2()/fitRes.Ndf();
   waveform->SetParameters(fitRes.GetParams());
 
   //for outputting and drawing (for debugging purposes)
-  if(drawFit){ //mws: Needs to breathe, hard to read.
-    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL); //mws: space
+  if(drawFit){
+    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL); 
     TFile* outf = new TFile("fitTrace.root","recreate"); 
     fitRes.Print(cout);
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
-      // cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl; //mws: line length
+      //      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
+      cout << "Analogue sum: " << getSum(getFitStart(), getFitLength()) << endl;
+      cout << "Max: " << getMax(getFitStart(), getFitLength()) << endl;
+      cout << "Fresh Analogue sum: " << getSum(trace, getFitStart(), getFitLength()) << endl;
+      cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
+      cout << "Fresh Max: " << getMax(trace, getFitStart(), getFitLength()) << endl;
     }
     
     if(!isSingleFit){
@@ -264,7 +303,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
     }
     TCanvas* c1 = new TCanvas("c1", "c1",0,0,1800,900);
     traceGraph->SetMarkerStyle(20);
-    waveform->SetTitle(TString::Format(";time [%.2f nsec]; ADC Counts", 1.0/func.getSampleRate())); //mws: line length
+    waveform->SetTitle(TString::Format(";time [%.2f nsec]; ADC Counts", 1.0/func.getSampleRate())); 
     waveform->GetXaxis()->SetRangeUser(pulseFitStart,pulseFitStart+fitLength);
     cout << "Param: " << waveform->GetParameter(0) << endl;
     waveform->Draw();
@@ -281,53 +320,59 @@ double pulseFitter::fitPulse(double* const trace, double error,
     delete c1;
     delete traceGraph;
     delete outf; 
-  } //mws: reiterate, this is too dense.
+  } 
   return chi2;
 }
 
 //numerically integrate the fitted function
 double pulseFitter::getIntegral(double start, double length) const{
-  if(start<0||((start+length)>func.getTraceLength())){ //mws: space
+  if(start<0||((start+length)>func.getTraceLength())){ 
     cerr << "Error in integral: invalid limits. " << endl;
     return 0;
   }
-  return waveform->Integral(start,start+length)-getBaseline()*length; //mws: space
+  return waveform->Integral(start, start+length)-getBaseline()*length; 
 }
 
 //take the baseline corrected sum of digitized points in specified range
 //this function is a wrapper that serves to pass the trace information to
 //the pulseFitFunction
 double pulseFitter::getSum(double* const trace, int start, int length){
-  return func.getSum(trace, start, length);
+  func.setTrace(trace);
+  func.findBaseline();
+  return func.evalSum(start, length);
 }
 
 //overloaded to work with unsigned shorts
 double pulseFitter::getSum(unsigned short* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length); //mws: space
+
+  return getSum(&doubleTrace[0], start, length);
 }
 
 //overloaded to work with floats
 double pulseFitter::getSum(float* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length); //mws: space
+
+  return getSum(&doubleTrace[0], start, length);
+}
+
+//gets analogue sum using the current trace and baseline information
+double pulseFitter::getSum(int start, int length){
+  return func.evalSum(start, length);
 }
 
 //this function actually executes the sum
-double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int length){
+double pulseFitter::pulseFitFunction::evalSum(int start, int length){
   //check the bounds
-  if(start<0||((start+length)>getTraceLength())){
+  if(start<0 || ((start+length) > getTraceLength()) ){
     cerr << "Error in sum: invalid limits. " << endl;
     return 0;
   }
-  
-  setTrace(trace);
+
   double runningSum = 0;
   for(int i = 0; i < length; ++i){
     runningSum = runningSum + currentTrace[start+i] - baseline;
@@ -335,10 +380,96 @@ double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int
   return runningSum;
 }
 
+//return max of trace in given range
+double pulseFitter::getMax(double* const trace, int start, int length){
+  func.setTrace(trace);
+  func.findBaseline();
+  return func.findMax(start, length);
+}
+
+//overloaded to work with unsigned shorts
+double pulseFitter::getMax(unsigned short* const trace, int start, int length){
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+
+  return getMax(&doubleTrace[0], start, length);
+}
+
+//overloaded to work with floats
+double pulseFitter::getMax(float* const trace, int start, int length){
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+
+  return getMax(&doubleTrace[0], start, length);
+}
+
+//get max using current trace and baseline information
+double pulseFitter::getMax(int start, int length){
+  return func.findMax(start, length);
+}
+
+double pulseFitter::pulseFitFunction::findMax(int start, int length){
+  if (start+length >= traceLength){
+    cerr << "Invalid limits for findMax!" << endl;
+    return 0;
+  }
+  
+  return *max_element(currentTrace+start, currentTrace+start+length-1) 
+    - baseline;
+} 
+
+//return min of trace in given range
+double pulseFitter::getMin(double* const trace, int start, int length){
+  func.setTrace(trace);
+  func.findBaseline();
+
+  return func.findMin(start, length);
+}
+
+//overloaded to work with unsigned shorts
+double pulseFitter::getMin(unsigned short* const trace, int start, int length){
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+
+  return getMin(&doubleTrace[0], start, length);
+}
+
+//overloaded to work with floats
+double pulseFitter::getMin(float* const trace, int start, int length){
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+
+  return getMin(&doubleTrace[0], start, length);
+}
+
+//get min using current trace and baseline information
+double pulseFitter::getMin(int start, int length){
+  return func.findMin(start, length);
+}
+
+double pulseFitter::pulseFitFunction::findMin(int start, int length){
+  if(start+length>=traceLength){
+    cerr << "Invalid limits for findMin!" << endl;
+    return 0;
+  }
+  return *min_element(currentTrace+start, currentTrace+length+start-1) - 
+    baseline;
+} 
+
+//attach trace to the pulseFitFunction
+int pulseFitter::pulseFitFunction::setTrace(double* const trace){
+  currentTrace = trace;
+  return checkPoints();
+}
+
 //evaluates the pulse model
 //ugly syntax, so it's localized here
 double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
-  return (this->*currentFitFunction)(t,t0); //mws: space
+  return ( this->*currentFitFunction )(t, t0); 
 }
 
 //the function used to define TF1's in root
@@ -347,9 +478,8 @@ double pulseFitter::pulseFitFunction::operator() (double* x, double* p){
  
   pulse = scale*evalPulse(x[0], p[0]);
   if(isDoubleFit)
-    pulse = pulse + pileUpScale*evalPulse(x[0],p[0]+p[1]); //mws: space
+    pulse = pulse + pileUpScale*evalPulse(x[0], p[0]+p[1]); 
   
- 
   pulse = pulse + baseline;
 
   return pulse;
@@ -361,9 +491,12 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
   //check if parameters have been updated
   //if they have, update the scale parameters
   bool updatedParameter = false;
-  double nParameters = lpg.size();
-  for(int i = 0; (!updatedParameter)&&i<nParameters; ++i){ //mws: space
-    updatedParameter = !(lpg[i] == p[i]);
+  int nParameters = lpg.size();
+
+  //check if parameters have been updated
+  //if they have, update the scale and baseline parameters
+  for(int i = 0; (!updatedParameter) && i<nParameters; ++i){ 
+    updatedParameter = lpg[i] != p[i];
   }
 
   if(updatedParameter){
@@ -374,6 +507,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     if(separateBaselineFit){
       updateScale();
     }
+
     else{
       updateScaleandPedestal();
     }
@@ -388,8 +522,8 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     x[0] = pulseFitStart+i;
     thisPoint = currentTrace[pulseFitStart+i];
     if(isGoodPoint[i]){
-      diff = thisPoint-(*this)(x,&lpg[0]); //mws: space
-      runningSum = runningSum + diff*diff/error/error; //mws: prefer *, / once
+      diff = thisPoint-(*this)(x, &lpg[0]); 
+      runningSum = runningSum + diff*diff/(error*error); 
     }
   }		       
 
@@ -397,12 +531,13 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
 }
 
 //take a dot product of two vectors
-double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){ //mws: line length
+double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){ 
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v1[i]*v2[i]; 
   }
-  return runningSum; //mws: breathe
+
+  return runningSum; 
 }
 
 //take a sum of the components of a vector
@@ -411,22 +546,27 @@ double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v[i];
   }
-  return runningSum; //mws: breathe
+
+  return runningSum; 
 }
 
 //check that each point in the trace is within the defined limits
 //if not, flag it as as bad point
 int pulseFitter::pulseFitFunction::checkPoints(){
   int nGoodPoints = 0;
-  for(int i = 0; i<fitLength; ++i){ //mws: space
+
+  for(int i = 0; i<fitLength; ++i){ 
     double thisPoint = currentTrace[i+pulseFitStart];
-    bool goodPoint = (thisPoint<clipCutHigh)&&(thisPoint>clipCutLow); //mws: space
+    bool goodPoint = (thisPoint<clipCutHigh) && (thisPoint>clipCutLow);  
     isGoodPoint[i] = goodPoint;
-    if(goodPoint)
+    
+    if (goodPoint)
       nGoodPoints++;
+  
   }
+  
   nPoints = nGoodPoints;
-  return nGoodPoints; //mws: breathe
+  return nGoodPoints; 
 }
 
 
@@ -452,7 +592,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     double d = dotProduct(p,t);
     double f = componentSum(p);
     double g = componentSum(t);
-    scale = (f*g-d*nPoints)/(g*g-a*nPoints); //mws: space
+    scale = (f*g-d*nPoints)/(g*g-a*nPoints); 
     baseline = (a*f-d*g)/(a*nPoints-g*g);
   }
   
@@ -461,7 +601,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
-	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); //mws: space
+	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); 
       else
 	t2[i] = 0;
     }
@@ -475,7 +615,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     double h = componentSum(t2);
     
     scale = (c*f*g-b*f*h-e*g*h+d*h*h-c*d*nPoints+b*e*nPoints)/
-      (c*g*g-2*b*g*h+a*h*h+b*b*nPoints-a*c*nPoints); //mws: messy but maybe necessary
+      (c*g*g-2*b*g*h+a*h*h+b*b*nPoints-a*c*nPoints); 
 
     pileUpScale = (e*g*g-b*f*g+a*f*h-d*g*h+b*d*nPoints-a*e*nPoints)/
       (a*h*h+b*b*nPoints-2*b*g*h+c*(g*g-a*nPoints));
@@ -494,7 +634,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
-      p[i] = (currentTrace[pulseFitStart+i]-baseline); //mws: space
+      p[i] = (currentTrace[pulseFitStart+i]-baseline); 
       t[i] = evalPulse(pulseFitStart+i, lpg[0]);
     }
     else{
@@ -512,7 +652,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
-	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); //mws: space
+	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); 
       else
 	t2[i] = 0;
     }
@@ -521,7 +661,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
     double c = dotProduct(t2,t2);
     double d = dotProduct(p,t);
     double e = dotProduct(p,t2);
-    scale = (b*e-c*d)/(b*b-a*c); //mws: space
+    scale = (b*e-c*d)/(b*b-a*c); 
     pileUpScale = (b*d-a*e)/(b*b-a*c); 
   }
 }
@@ -561,7 +701,7 @@ double pulseFitter::pulseFitFunction::beamSource(double t, double t0){
     pulse = 0;
   }
   else{
-    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]); //mws: line length
+    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]); 
    
     double term2 = exp(-1*(t-t0)/lpg[5])*lpg[5]*lpg[3]/(lpg[5]-lpg[3])/(-1*lpg[2]*lpg[3]+lpg[5]*(lpg[3]+lpg[2]));
    
@@ -581,7 +721,7 @@ double pulseFitter::pulseFitFunction::beamSource(double t, double t0){
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
 double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
-  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))* //mws: line length
+  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))* 
     erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3])); 
   
   double term2 = -1*exp((lpg[4]+lpg[3])*(2.0*(t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(2.0*lpg[4]*lpg[4]*lpg[3]*lpg[3]))*
@@ -594,8 +734,8 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 
 //template fit
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
-  if((t-t0)>0&&(t-t0)<templateLength) //mws: space
-    return templateSpline->Eval(t-t0); //mws: space
+  if((t-t0)>0&&(t-t0)<templateLength) 
+    return templateSpline->Eval(t-t0);
   else
     return 0;
 }

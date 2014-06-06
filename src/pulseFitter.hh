@@ -44,15 +44,33 @@ public:
   double getChi2() const { return chi2; }
   bool wasValidFit() const { return wasValid; }
   double getIntegral(double start, double length) const;
-  double getMaximum() const { return waveform->GetMaximum(0,func.getTraceLength()); } //mws: line length, space
-  double getMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
+
+  double getFunctionMaximum() const { return waveform->GetMaximum(0,func.getTraceLength()); }
+  double getFunctionMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
+
+  //get back some fit parameters from the config file
+  double getFitStart() const { return pulseFitStart; }
+  double getFitLength() const { return fitLength; }
 
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
   double getSum(unsigned short* const trace, int start, int length);
   double getSum(float* const trace, int start, int length);
+  
+  //analogue sum using currently stored trace and baseline info
+  double getSum(int start, int length);
 
+  //to get max/min of trace in certain range without doing a fit first
+  double getMax(double* const trace, int start, int length);
+  double getMax(unsigned short* const trace, int start, int length);
+  double getMax(float* const trace, int start, int length);
+  double getMin(double* const trace, int start, int length);
+  double getMin(unsigned short* const trace, int start, int length);
+  double getMin(float* const trace, int start, int length);
 
+  //max/min using currently stored trace and baseline info
+  double getMax(int start, int length);
+  double getMin(int start, int length);
 
 private:
 
@@ -65,12 +83,14 @@ private:
     double operator() (const double* p);
   
     //returns number of good data points in the range
-    int setTrace(double* const trace) {currentTrace = trace; findBaseline(); return checkPoints();} //mws: line length
+    int setTrace(double* const trace);
   
-  
+    //finds baseline by looking at island before the trace
+    void findBaseline();
+
     void setDoubleFit(bool isDouble) {isDoubleFit = isDouble;}
     void setError(double err) {error = err;}
-    int getPulseFitStart() const {return pulseFitStart;}
+    int getFitStart() const {return pulseFitStart;}
     int getFitLength() const {return fitLength;}
     int getNParameters() const {return lpg.size();}
     int getTraceLength() const {return traceLength;}
@@ -79,8 +99,11 @@ private:
     double getRatio() const { return pileUpScale/scale; }
     double getBaseline() const { return baseline; }
     double getSampleRate() const { return sampleRate; }
+    bool isSeparateBaselineFit() const { return separateBaselineFit; }
 
-    double getSum(double* const trace, int start, int length); 
+    double evalSum(int start, int length); 
+    double findMax(int start, int length);
+    double findMin(int start, int length);
   private:
     //private helper functions
     double evalPulse(double t, double t0);
@@ -88,7 +111,6 @@ private:
     double componentSum(const std::vector<double>& v);
     int checkPoints();
     void updateScale();
-    void findBaseline();
     void updateScaleandPedestal();
     
     //pointer to current fit function
@@ -102,7 +124,7 @@ private:
     double sampleRate;
  
     std::vector<double> lpg; //last parameter guesses
-
+     
     double error;
     double scale;
     double pileUpScale;
@@ -112,6 +134,7 @@ private:
     bool isDoubleFit;
 
     double* currentTrace;
+
     std::vector<bool> isGoodPoint;
     int traceLength, pulseFitStart, fitLength;
     int bFitLength, bFitBuffer; //baseline fit length, baseline fit buffer 
@@ -144,6 +167,9 @@ private:
   std::vector<bool> freeParameter;
   double chi2;
   bool wasValid;
+
+  //copy of trace as double in case it was entered as another data type 
+  std::vector<double> doubleTrace;
 
   TF1* waveform;
   ROOT::Math::WrappedMultiTF1* wwaveform;

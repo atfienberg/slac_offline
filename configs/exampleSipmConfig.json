@@ -21,6 +21,6 @@
     "base_fit_length"   :30,
     "base_fit_buffer"   :10,
     "separate_baseline_fit" : false,
-    "draw"              :true
+    "draw"              :false
     }
 }
