@@ -44,7 +44,7 @@ public:
   double getChi2() const { return chi2; }
   bool wasValidFit() const { return wasValid; }
   double getIntegral(double start, double length) const;
-  double getMaximum() const { return waveform->GetMaximum(0,func.getTraceLength()); }
+  double getMaximum() const { return waveform->GetMaximum(0,func.getTraceLength()); } //mws: line length, space
   double getMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
 
   //to get analogue sum without doing a fit first
@@ -65,7 +65,7 @@ private:
     double operator() (const double* p);
   
     //returns number of good data points in the range
-    int setTrace(double* const trace) {currentTrace = trace; findBaseline(); return checkPoints();}
+    int setTrace(double* const trace) {currentTrace = trace; findBaseline(); return checkPoints();} //mws: line length
   
   
     void setDoubleFit(bool isDouble) {isDoubleFit = isDouble;}
@@ -84,7 +84,7 @@ private:
   private:
     //private helper functions
     double evalPulse(double t, double t0);
-    double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2);
+    double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2); //mws: line length
     double componentSum(const std::vector<double>& v);
     int checkPoints();
     void updateScale();
@@ -126,7 +126,7 @@ private:
   };  
   pulseFitFunction func;
   
-  ROOT::Fit::Fitter f;
+  ROOT::Fit::Fitter f; //mws: more meaningful name
 
   double fitPulse(double* const trace, double error, 
 		  bool isSingleFit);

@@ -4,6 +4,8 @@ fienberg@uw.edu
 Implementation for pulseFitter classes
 */  
 
+//mws: Your includes should have some hierarchy: <std>, "other", "project".
+//mws: There are also some things in here that are doubly included from the header.
 #include <cmath> 
 #include "pulseFitter.hh"
 #include <iostream>
@@ -25,15 +27,18 @@ Implementation for pulseFitter classes
 
 using namespace std;
 
-//constructor for the pulseFitFunctionClass, must be constructed with a config file
-pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
+//constructor for the pulseFitFunctionClass, must be constructed with a config file //mws: comments should be complete sentences if standalone. Short comments should be inline with code.
+pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ //mws: space before opening brackets is just preference. I prefer it, but do what you want.
   //read config file
   boost::property_tree::ptree conf;
   read_json(config, conf);
   auto fitConfig = conf.get_child("fit_specs");
   auto digConfig = conf.get_child("digitizer_specs");  
+
+  //mws: Let the code breathe a little more, like separating the getting of 
+  // config files and the getting of parameters
   sampleRate = digConfig.get<double>("sample_rate");
-  double nParameters = fitConfig.get<int>("n_parameters");
+  double nParameters = fitConfig.get<int>("n_parameters"); //mws: Why a double?
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
   bFitLength = fitConfig.get<int>("base_fit_length");
@@ -54,10 +59,10 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   
   //determine fit type
   string fitType = fitConfig.get<string>("fit_type");
-  if(fitType==string("beam")){
-    currentFitFunction = &pulseFitter::pulseFitFunction::beamSource;
+  if(fitType==string("beam")){ //mws: space on both sides of operators and after control statements
+    currentFitFunction = &pulseFitter::pulseFitFunction::beamSource; //mws: generally a good idea to add lines in control structures for readability
   }
-  else if(fitType==string("laser")){
+  else if(fitType==string("laser")){ //mws: space
     currentFitFunction = &pulseFitter::pulseFitFunction::laserSource;
   }
   else if(fitType==string("template")){
@@ -74,7 +79,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
 
 //Destructor to relase dynamically allocated memory
 pulseFitter::pulseFitFunction::~pulseFitFunction(){
-  if(templateFile!=NULL){
+  if(templateFile!=NULL){ 
     delete templateSpline;
     delete errorSpline;
     templateFile->Close();
@@ -89,9 +94,9 @@ pulseFitter::pulseFitter(char* config):
   pulseFitStart = func.getPulseFitStart();
   fitLength = func.getFitLength();
 
-  //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs
+  //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs //mws: keep lines to 80 characeters max
   xPoints.resize(func.getTraceLength());
-  for(int i = 0; i<func.getTraceLength(); ++i){
+  for(int i = 0; i<func.getTraceLength(); ++i){ //mws: space
     xPoints[i] = static_cast<double>(i);
   }
 					       
@@ -101,10 +106,10 @@ pulseFitter::pulseFitter(char* config):
   auto fitConfig = conf.get_child("fit_specs");
   drawFit = fitConfig.get<bool>("draw");
 
-  waveform = new TF1("fit", &func, 0, func.getTraceLength(), func.getNParameters());
+  waveform = new TF1("fit", &func, 0, func.getTraceLength(), func.getNParameters()); //mws: line length
  
   waveform->SetNpx(10000);
-  wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1);
+  wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1); //mws: space after commas
   f.SetFunction(*wwaveform);
 
   //read arrays from the config file
@@ -155,7 +160,7 @@ double pulseFitter::fitDouble(unsigned short* const trace, double error){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
   func.setDoubleFit(true);
-  return fitPulse(&doubleTrace[0],error,false);
+  return fitPulse(&doubleTrace[0],error,false); //mws: space
 }
 
 //overloaded to work with floats
@@ -165,13 +170,13 @@ double pulseFitter::fitDouble(float* const trace, double error){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
   func.setDoubleFit(true);
-  return fitPulse(&doubleTrace[0],error,false);
+  return fitPulse(&doubleTrace[0],error,false); //mws: space
 }
 
 //tries to fit a single pulse
 double pulseFitter::fitSingle(double* const trace, double error){
   func.setDoubleFit(false);
-  return fitPulse(trace,error,true);
+  return fitPulse(trace,error,true); //mws: space
 }
 
 //overloaded for unsigned shorts
@@ -181,7 +186,7 @@ double pulseFitter::fitSingle(float* const trace, double error){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
   func.setDoubleFit(false);
-  return fitPulse(&doubleTrace[0],error,true);
+  return fitPulse(&doubleTrace[0],error,true); //mws: space
 }
 
 //overloaded for floats
@@ -191,25 +196,25 @@ double pulseFitter::fitSingle(unsigned short* const trace, double error){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
   func.setDoubleFit(false);
-  return fitPulse(&doubleTrace[0],error,true);
+  return fitPulse(&doubleTrace[0],error,true); //mws: space
 }
 
-//function that sets initial parameters for ROOT fitter and then calls the fitter
+//function that sets initial parameters for ROOT fitter and then calls the fitter //mws: line length
 double pulseFitter::fitPulse(double* const trace, double error, 
-			     bool isSingleFit){
+			     bool isSingleFit){ //mws: for lines like this indent each argument
   func.setError(error);  
 
   //set initial parameters based on whether it is a single or a double fit. 
   //parameter 1 should be delta t
   for(int i = 0; i<func.getNParameters(); ++i){
-    if((i!=1)&&freeParameter[i]){
+    if((i!=1)&&freeParameter[i]){ //mws: space
       f.Config().ParSettings(i).Set(parNames[i].c_str(),
 				    initialParGuesses[i],
 				    parSteps[i],
 				    parMins[i],
 				    parMaxes[i]);
     }
-    else if(i==1){
+    else if(i==1){ //mws: space
       if(isSingleFit){
 	f.Config().ParSettings(1).Set("Delta T",0);
       }
@@ -223,12 +228,12 @@ double pulseFitter::fitPulse(double* const trace, double error,
       }
     }
     else{
-      f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
+      f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);//mws: space
     }      
-  }
+  } //mws: That whole control structure could use some extra lines for readability
 
   //call the minimizer
-  f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true);
+  f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true); //mws: space
 
   ROOT::Fit::FitResult fitRes = f.Result();
 
@@ -239,15 +244,15 @@ double pulseFitter::fitPulse(double* const trace, double error,
   waveform->SetParameters(fitRes.GetParams());
 
   //for outputting and drawing (for debugging purposes)
-  if(drawFit){
-    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL);
-    TFile* outf = new TFile("fitTrace.root","recreate");
+  if(drawFit){ //mws: Needs to breathe, hard to read.
+    TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL); //mws: space
+    TFile* outf = new TFile("fitTrace.root","recreate"); 
     fitRes.Print(cout);
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
       // cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
+      cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl; //mws: line length
     }
     
     if(!isSingleFit){
@@ -259,7 +264,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
     }
     TCanvas* c1 = new TCanvas("c1", "c1",0,0,1800,900);
     traceGraph->SetMarkerStyle(20);
-    waveform->SetTitle(TString::Format(";time [%.2f nsec]; ADC Counts", 1.0/func.getSampleRate()));
+    waveform->SetTitle(TString::Format(";time [%.2f nsec]; ADC Counts", 1.0/func.getSampleRate())); //mws: line length
     waveform->GetXaxis()->SetRangeUser(pulseFitStart,pulseFitStart+fitLength);
     cout << "Param: " << waveform->GetParameter(0) << endl;
     waveform->Draw();
@@ -276,17 +281,17 @@ double pulseFitter::fitPulse(double* const trace, double error,
     delete c1;
     delete traceGraph;
     delete outf; 
-  }
+  } //mws: reiterate, this is too dense.
   return chi2;
 }
 
 //numerically integrate the fitted function
 double pulseFitter::getIntegral(double start, double length) const{
-  if(start<0||((start+length)>func.getTraceLength())){
+  if(start<0||((start+length)>func.getTraceLength())){ //mws: space
     cerr << "Error in integral: invalid limits. " << endl;
     return 0;
   }
-  return waveform->Integral(start,start+length)-getBaseline()*length;
+  return waveform->Integral(start,start+length)-getBaseline()*length; //mws: space
 }
 
 //take the baseline corrected sum of digitized points in specified range
@@ -302,7 +307,7 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length);
+  return func.getSum(&doubleTrace[0],start,length); //mws: space
 }
 
 //overloaded to work with floats
@@ -311,7 +316,7 @@ double pulseFitter::getSum(float* const trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length);
+  return func.getSum(&doubleTrace[0],start,length); //mws: space
 }
 
 //this function actually executes the sum
@@ -333,7 +338,7 @@ double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int
 //evaluates the pulse model
 //ugly syntax, so it's localized here
 double pulseFitter::pulseFitFunction::evalPulse(double t, double t0){
-  return (this->*currentFitFunction)(t,t0);
+  return (this->*currentFitFunction)(t,t0); //mws: space
 }
 
 //the function used to define TF1's in root
@@ -342,7 +347,7 @@ double pulseFitter::pulseFitFunction::operator() (double* x, double* p){
  
   pulse = scale*evalPulse(x[0], p[0]);
   if(isDoubleFit)
-    pulse = pulse + pileUpScale*evalPulse(x[0],p[0]+p[1]);
+    pulse = pulse + pileUpScale*evalPulse(x[0],p[0]+p[1]); //mws: space
   
  
   pulse = pulse + baseline;
@@ -357,7 +362,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
   //if they have, update the scale parameters
   bool updatedParameter = false;
   double nParameters = lpg.size();
-  for(int i = 0; (!updatedParameter)&&i<nParameters; ++i){
+  for(int i = 0; (!updatedParameter)&&i<nParameters; ++i){ //mws: space
     updatedParameter = !(lpg[i] == p[i]);
   }
 
@@ -383,8 +388,8 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     x[0] = pulseFitStart+i;
     thisPoint = currentTrace[pulseFitStart+i];
     if(isGoodPoint[i]){
-      diff = thisPoint-(*this)(x,&lpg[0]);
-      runningSum = runningSum + diff*diff/error/error;
+      diff = thisPoint-(*this)(x,&lpg[0]); //mws: space
+      runningSum = runningSum + diff*diff/error/error; //mws: prefer *, / once
     }
   }		       
 
@@ -392,12 +397,12 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
 }
 
 //take a dot product of two vectors
-double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){
+double pulseFitter::pulseFitFunction::dotProduct(const vector<double>& v1, const vector<double>& v2){ //mws: line length
   double runningSum = 0;
   for(int i = 0; i < fitLength; ++i){
-    runningSum = runningSum + v1[i]*v2[i];
+    runningSum = runningSum + v1[i]*v2[i]; 
   }
-  return runningSum;
+  return runningSum; //mws: breathe
 }
 
 //take a sum of the components of a vector
@@ -406,22 +411,22 @@ double pulseFitter::pulseFitFunction::componentSum(const vector<double>& v){
   for(int i = 0; i < fitLength; ++i){
     runningSum = runningSum + v[i];
   }
-  return runningSum;
+  return runningSum; //mws: breathe
 }
 
 //check that each point in the trace is within the defined limits
 //if not, flag it as as bad point
 int pulseFitter::pulseFitFunction::checkPoints(){
   int nGoodPoints = 0;
-  for(int i = 0; i<fitLength; ++i){
+  for(int i = 0; i<fitLength; ++i){ //mws: space
     double thisPoint = currentTrace[i+pulseFitStart];
-    bool goodPoint = (thisPoint<clipCutHigh)&&(thisPoint>clipCutLow);
+    bool goodPoint = (thisPoint<clipCutHigh)&&(thisPoint>clipCutLow); //mws: space
     isGoodPoint[i] = goodPoint;
     if(goodPoint)
       nGoodPoints++;
   }
   nPoints = nGoodPoints;
-  return nGoodPoints;
+  return nGoodPoints; //mws: breathe
 }
 
 
@@ -447,7 +452,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     double d = dotProduct(p,t);
     double f = componentSum(p);
     double g = componentSum(t);
-    scale = (f*g-d*nPoints)/(g*g-a*nPoints);
+    scale = (f*g-d*nPoints)/(g*g-a*nPoints); //mws: space
     baseline = (a*f-d*g)/(a*nPoints-g*g);
   }
   
@@ -456,7 +461,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
-	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]);
+	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); //mws: space
       else
 	t2[i] = 0;
     }
@@ -470,7 +475,7 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
     double h = componentSum(t2);
     
     scale = (c*f*g-b*f*h-e*g*h+d*h*h-c*d*nPoints+b*e*nPoints)/
-      (c*g*g-2*b*g*h+a*h*h+b*b*nPoints-a*c*nPoints);
+      (c*g*g-2*b*g*h+a*h*h+b*b*nPoints-a*c*nPoints); //mws: messy but maybe necessary
 
     pileUpScale = (e*g*g-b*f*g+a*f*h-d*g*h+b*d*nPoints-a*e*nPoints)/
       (a*h*h+b*b*nPoints-2*b*g*h+c*(g*g-a*nPoints));
@@ -489,7 +494,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
 
   for(int i = 0; i < fitLength; ++i){
     if(isGoodPoint[i]){
-      p[i] = (currentTrace[pulseFitStart+i]-baseline);
+      p[i] = (currentTrace[pulseFitStart+i]-baseline); //mws: space
       t[i] = evalPulse(pulseFitStart+i, lpg[0]);
     }
     else{
@@ -507,7 +512,7 @@ void pulseFitter::pulseFitFunction::updateScale(){
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
       if(isGoodPoint[i])
-	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]);
+	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); //mws: space
       else
 	t2[i] = 0;
     }
@@ -516,8 +521,8 @@ void pulseFitter::pulseFitFunction::updateScale(){
     double c = dotProduct(t2,t2);
     double d = dotProduct(p,t);
     double e = dotProduct(p,t2);
-    scale = (b*e-c*d)/(b*b-a*c);
-    pileUpScale = (b*d-a*e)/(b*b-a*c);
+    scale = (b*e-c*d)/(b*b-a*c); //mws: space
+    pileUpScale = (b*d-a*e)/(b*b-a*c); 
   }
 }
 
@@ -556,7 +561,7 @@ double pulseFitter::pulseFitFunction::beamSource(double t, double t0){
     pulse = 0;
   }
   else{
-    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]);
+    double term1 = exp(-1*(t-t0)/lpg[3])*lpg[5]*lpg[3]/(lpg[3]-lpg[5])/(-1*lpg[5]*lpg[4]+lpg[5]*lpg[3]+lpg[4]*lpg[3]); //mws: line length
    
     double term2 = exp(-1*(t-t0)/lpg[5])*lpg[5]*lpg[3]/(lpg[5]-lpg[3])/(-1*lpg[2]*lpg[3]+lpg[5]*(lpg[3]+lpg[2]));
    
@@ -576,8 +581,8 @@ double pulseFitter::pulseFitFunction::beamSource(double t, double t0){
 //lpg[3] is device decay constant
 //lpg[4] is device device ramp constant
 double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
-  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))*
-    erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3]));
+  double term1 = exp((lpg[2]*lpg[2]+2.0*t0*lpg[3]-2.0*t*lpg[3])/(2*lpg[3]*lpg[3]))* //mws: line length
+    erfc((lpg[2]*lpg[2]+(t0-t)*lpg[3])/(1.41421*lpg[2]*lpg[3])); 
   
   double term2 = -1*exp((lpg[4]+lpg[3])*(2.0*(t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(2.0*lpg[4]*lpg[4]*lpg[3]*lpg[3]))*
     erfc(((t0-t)*lpg[4]*lpg[3]+lpg[2]*lpg[2]*(lpg[4]+lpg[3]))/(1.41421*lpg[2]*lpg[4]*lpg[3]));
@@ -589,8 +594,8 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 
 //template fit
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
-  if((t-t0)>0&&(t-t0)<templateLength)
-    return templateSpline->Eval(t-t0);
+  if((t-t0)>0&&(t-t0)<templateLength) //mws: space
+    return templateSpline->Eval(t-t0); //mws: space
   else
     return 0;
 }
