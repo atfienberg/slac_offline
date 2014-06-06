@@ -48,6 +48,10 @@ public:
   double getFunctionMaximum() const { return waveform->GetMaximum(0,func.getTraceLength()); }
   double getFunctionMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
 
+  //get back some fit parameters from the config file
+  double getFitStart() const { return pulseFitStart; }
+  double getFitLength() const { return fitLength; }
+
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
   double getSum(unsigned short* const trace, int start, int length);
@@ -86,7 +90,7 @@ private:
 
     void setDoubleFit(bool isDouble) {isDoubleFit = isDouble;}
     void setError(double err) {error = err;}
-    int getPulseFitStart() const {return pulseFitStart;}
+    int getFitStart() const {return pulseFitStart;}
     int getFitLength() const {return fitLength;}
     int getNParameters() const {return lpg.size();}
     int getTraceLength() const {return traceLength;}

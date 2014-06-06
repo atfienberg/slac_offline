@@ -39,7 +39,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ //mws: space befo
   //mws: Let the code breathe a little more, like separating the getting of 
   // config files and the getting of parameters
   sampleRate = digConfig.get<double>("sample_rate");
-  int nParameters = fitConfig.get<int>("n_parameters"); //mws: Why a double?
+  int nParameters = fitConfig.get<int>("n_parameters"); 
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
   bFitLength = fitConfig.get<int>("base_fit_length");
@@ -92,7 +92,7 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 pulseFitter::pulseFitter(char* config):
   func(config)
 {
-  pulseFitStart = func.getPulseFitStart();
+  pulseFitStart = func.getFitStart();
   fitLength = func.getFitLength();
 
   //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs //mws: keep lines to 80 characeters max
@@ -259,11 +259,11 @@ double pulseFitter::fitPulse(double* const trace, double error,
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
       //      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      cout << "Analogue sum: " << getSum(pulseFitStart, fitLength+20) << endl;
-      cout << "Max: " << getMax(pulseFitStart, fitLength+20) << endl;
-      cout << "Fresh Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
+      cout << "Analogue sum: " << getSum(getFitStart(), getFitLength()) << endl;
+      cout << "Max: " << getMax(getFitStart(), getFitLength()) << endl;
+      cout << "Fresh Analogue sum: " << getSum(trace, getFitStart(), getFitLength()) << endl;
       cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
-      cout << "Fresh Max: " << getMax(trace, pulseFitStart, fitLength+20) << endl;
+      cout << "Fresh Max: " << getMax(trace, getFitStart(), getFitLength()) << endl;
     }
     
     if(!isSingleFit){
