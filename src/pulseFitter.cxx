@@ -21,6 +21,7 @@ Implementation for pulseFitter classes
 #include "Math/WrappedMultiTF1.h"
 #include <vector>
 #include <string>
+#include <algorithm>
 
 
 using namespace std;
@@ -226,9 +227,14 @@ double pulseFitter::fitPulse(double* const trace, double error,
       f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
     }      
   }
+  //connect the function to the trace
+  int nPoints = func.setTrace(trace);
+  if(func.isSeparateBaselineFit()){
+    func.findBaseline();
+  }
 
   //call the minimizer
-  f.FitFCN(func.getNParameters(),func,0,func.setTrace(trace),true);
+  f.FitFCN(func.getNParameters(),func,0,nPoints,true);
 
   ROOT::Fit::FitResult fitRes = f.Result();
 
@@ -246,8 +252,13 @@ double pulseFitter::fitPulse(double* const trace, double error,
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
-      // cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
+      //      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
+      cout << "Analogue sum: " << getSum(pulseFitStart, fitLength+20) << endl;
+      cout << "Fresh Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
+      cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
+      cout << "Max: " << getMax(pulseFitStart, fitLength+20) << endl;
+      cout << "Fresh Max: " << getMax(trace, pulseFitStart, fitLength+20) << endl;
+
     }
     
     if(!isSingleFit){
@@ -293,7 +304,9 @@ double pulseFitter::getIntegral(double start, double length) const{
 //this function is a wrapper that serves to pass the trace information to
 //the pulseFitFunction
 double pulseFitter::getSum(double* const trace, int start, int length){
-  return func.getSum(trace, start, length);
+  func.setTrace(trace);
+  func.findBaseline();
+  return func.evalSum(start, length);
 }
 
 //overloaded to work with unsigned shorts
@@ -302,7 +315,7 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length);
+  return getSum(&doubleTrace[0],start,length);
 }
 
 //overloaded to work with floats
@@ -311,23 +324,109 @@ double pulseFitter::getSum(float* const trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
-  return func.getSum(&doubleTrace[0],start,length);
+  return getSum(&doubleTrace[0],start,length);
+}
+
+//gets analogue sum using the current trace and baseline information
+double pulseFitter::getSum(int start, int length){
+  return func.evalSum(start, length);
 }
 
 //this function actually executes the sum
-double pulseFitter::pulseFitFunction::getSum(double* const trace, int start, int length){
+double pulseFitter::pulseFitFunction::evalSum(int start, int length){
   //check the bounds
   if(start<0||((start+length)>getTraceLength())){
     cerr << "Error in sum: invalid limits. " << endl;
     return 0;
   }
-  
-  setTrace(trace);
+
   double runningSum = 0;
   for(int i = 0; i < length; ++i){
     runningSum = runningSum + currentTrace[start+i] - baseline;
   }
   return runningSum;
+}
+
+//return max of trace in given range
+double pulseFitter::getMax(double* const trace, int start, int length){
+  func.setTrace(trace);
+  func.findBaseline();
+  return func.findMax(start, length);
+}
+
+//overloaded to work with unsigned shorts
+double pulseFitter::getMax(unsigned short* const trace, int start, int length){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  return getMax(&doubleTrace[0],start,length);
+}
+
+//overloaded to work with floats
+double pulseFitter::getMax(float* const trace, int start, int length){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  return getMax(&doubleTrace[0],start,length);
+}
+
+//get max using current trace and baseline information
+double pulseFitter::getMax(int start, int length){
+  return func.findMax(start, length);
+}
+
+double pulseFitter::pulseFitFunction::findMax(int start, int length){
+  if(start+length>=traceLength){
+    cerr << "Invalid limits for findMax!" << endl;
+    return 0;
+  }
+  return *max_element(currentTrace+start, currentTrace+start+length-1) - baseline;
+} 
+
+//return min of trace in given range
+double pulseFitter::getMin(double* const trace, int start, int length){
+  func.setTrace(trace);
+  func.findBaseline();
+  return func.findMin(start, length);
+}
+
+//overloaded to work with unsigned shorts
+double pulseFitter::getMin(unsigned short* const trace, int start, int length){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  return getMin(&doubleTrace[0],start,length);
+}
+
+//overloaded to work with floats
+double pulseFitter::getMin(float* const trace, int start, int length){
+  vector<double> doubleTrace(func.getTraceLength());
+  for(int i = 0; i < func.getTraceLength(); ++i){
+    doubleTrace[i] = static_cast<double>(trace[i]);
+  }
+  return getMin(&doubleTrace[0],start,length);
+}
+
+//get min using current trace and baseline information
+double pulseFitter::getMin(int start, int length){
+  return func.findMin(start, length);
+}
+
+double pulseFitter::pulseFitFunction::findMin(int start, int length){
+  if(start+length>=traceLength){
+    cerr << "Invalid limits for findMin!" << endl;
+    return 0;
+  }
+  return *min_element(currentTrace+start, currentTrace+length+start-1) - baseline;
+} 
+
+//attach trace to the pulseFitFunction
+int pulseFitter::pulseFitFunction::setTrace(double* const trace){
+  currentTrace = trace;
+  return checkPoints();
 }
 
 //evaluates the pulse model
