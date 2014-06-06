@@ -62,7 +62,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   }
   else if(fitType==string("template")){
     currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
-    templateFile = new TFile("fuzzyTemplateOut.root");
+    templateFile = new TFile("templateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
     errorSpline = (TSpline3*)templateFile->Get("errorSpline");
   }
