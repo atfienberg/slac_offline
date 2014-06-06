@@ -39,7 +39,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ //mws: space befo
   //mws: Let the code breathe a little more, like separating the getting of 
   // config files and the getting of parameters
   sampleRate = digConfig.get<double>("sample_rate");
-  double nParameters = fitConfig.get<int>("n_parameters"); //mws: Why a double?
+  int nParameters = fitConfig.get<int>("n_parameters"); //mws: Why a double?
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
   bFitLength = fitConfig.get<int>("base_fit_length");
@@ -100,6 +100,9 @@ pulseFitter::pulseFitter(char* config):
   for(int i = 0; i<func.getTraceLength(); ++i){ //mws: space
     xPoints[i] = static_cast<double>(i);
   }
+
+  //resize doubleTrace
+  doubleTrace.resize(func.getTraceLength());
 					       
   //read config file
   boost::property_tree::ptree conf;
@@ -156,7 +159,6 @@ double pulseFitter::fitDouble(double* const trace, double error){
 
 //overloaded to work with unsigned shorts
 double pulseFitter::fitDouble(unsigned short* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -166,7 +168,6 @@ double pulseFitter::fitDouble(unsigned short* const trace, double error){
 
 //overloaded to work with floats
 double pulseFitter::fitDouble(float* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -182,7 +183,6 @@ double pulseFitter::fitSingle(double* const trace, double error){
 
 //overloaded for unsigned shorts
 double pulseFitter::fitSingle(float* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -192,7 +192,6 @@ double pulseFitter::fitSingle(float* const trace, double error){
 
 //overloaded for floats
 double pulseFitter::fitSingle(unsigned short* const trace, double error){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -241,7 +240,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
 
   //call the minimizer
   f.FitFCN(func.getNParameters(),func,0,nPoints,true);
-  } //mws: That whole control structure could use some extra lines for readability
+  //mws: That whole control structure could use some extra lines for readability
 
   ROOT::Fit::FitResult fitRes = f.Result();
 
@@ -261,9 +260,9 @@ double pulseFitter::fitPulse(double* const trace, double error,
       cout << "Baseline: " << getBaseline() << endl;
       //      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
       cout << "Analogue sum: " << getSum(pulseFitStart, fitLength+20) << endl;
+      cout << "Max: " << getMax(pulseFitStart, fitLength+20) << endl;
       cout << "Fresh Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
       cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
-      cout << "Max: " << getMax(pulseFitStart, fitLength+20) << endl;
       cout << "Fresh Max: " << getMax(trace, pulseFitStart, fitLength+20) << endl;
     }
     
@@ -317,7 +316,6 @@ double pulseFitter::getSum(double* const trace, int start, int length){
 
 //overloaded to work with unsigned shorts
 double pulseFitter::getSum(unsigned short* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -327,7 +325,6 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
 
 //overloaded to work with floats
 double pulseFitter::getSum(float* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -364,7 +361,6 @@ double pulseFitter::getMax(double* const trace, int start, int length){
 
 //overloaded to work with unsigned shorts
 double pulseFitter::getMax(unsigned short* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -373,7 +369,6 @@ double pulseFitter::getMax(unsigned short* const trace, int start, int length){
 
 //overloaded to work with floats
 double pulseFitter::getMax(float* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -402,7 +397,6 @@ double pulseFitter::getMin(double* const trace, int start, int length){
 
 //overloaded to work with unsigned shorts
 double pulseFitter::getMin(unsigned short* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -411,7 +405,6 @@ double pulseFitter::getMin(unsigned short* const trace, int start, int length){
 
 //overloaded to work with floats
 double pulseFitter::getMin(float* const trace, int start, int length){
-  vector<double> doubleTrace(func.getTraceLength());
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }

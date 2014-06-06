@@ -120,7 +120,7 @@ private:
     double sampleRate;
  
     std::vector<double> lpg; //last parameter guesses
-
+     
     double error;
     double scale;
     double pileUpScale;
@@ -130,6 +130,7 @@ private:
     bool isDoubleFit;
 
     double* currentTrace;
+
     std::vector<bool> isGoodPoint;
     int traceLength, pulseFitStart, fitLength;
     int bFitLength, bFitBuffer; //baseline fit length, baseline fit buffer 
@@ -162,6 +163,9 @@ private:
   std::vector<bool> freeParameter;
   double chi2;
   bool wasValid;
+
+  //copy of trace as double in case it was entered as another data type 
+  std::vector<double> doubleTrace;
 
   TF1* waveform;
   ROOT::Math::WrappedMultiTF1* wwaveform;
