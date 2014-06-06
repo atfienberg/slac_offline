@@ -52,6 +52,8 @@ public:
   double getSum(unsigned short* const trace, int start, int length);
   double getSum(float* const trace, int start, int length);
 
+
+
 private:
 
   /* the function that the pulseFitter uses to fit traces (with the defined () operator)  */
@@ -70,7 +72,7 @@ private:
     void setError(double err) {error = err;}
     int getPulseFitStart() const {return pulseFitStart;}
     int getFitLength() const {return fitLength;}
-    int getNParameters() const {return nParameters;}
+    int getNParameters() const {return lpg.size();}
     int getTraceLength() const {return traceLength;}
     double getScale() const { return scale; }
     double getPileUpScale() const { return pileUpScale; }
@@ -99,7 +101,6 @@ private:
 
     double sampleRate;
  
-    int nParameters;
     std::vector<double> lpg; //last parameter guesses
 
     double error;

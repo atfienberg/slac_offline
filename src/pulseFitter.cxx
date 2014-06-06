@@ -33,7 +33,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   auto fitConfig = conf.get_child("fit_specs");
   auto digConfig = conf.get_child("digitizer_specs");  
   sampleRate = digConfig.get<double>("sample_rate");
-  nParameters = fitConfig.get<int>("n_parameters");
+  double nParameters = fitConfig.get<int>("n_parameters");
   pulseFitStart = fitConfig.get<int>("fit_start"); 
   fitLength = fitConfig.get<int>("fit_length");
   bFitLength = fitConfig.get<int>("base_fit_length");
@@ -356,6 +356,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
   //check if parameters have been updated
   //if they have, update the scale parameters
   bool updatedParameter = false;
+  double nParameters = lpg.size();
   for(int i = 0; (!updatedParameter)&&i<nParameters; ++i){
     updatedParameter = !(lpg[i] == p[i]);
   }

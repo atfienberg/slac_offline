@@ -14,11 +14,11 @@ makeTemplate: objects/makeTemplate.o
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-templateFitterTest: objects/templateFitterTest.o
+templateFitterTest: objects/templateFitterTest.o objects/pulseFitter.o
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-objects/templateFitterTest.o: src/otherExecutables/templateFitterTest.cxx
+objects/templateFitterTest.o: src/otherExecutables/templateFitterTest.cxx objects/pulseFitter.o
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@
 
