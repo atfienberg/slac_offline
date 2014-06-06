@@ -13,7 +13,7 @@ int main(){
   new TApplication("app", 0, nullptr);
 
   //read inputfile
-  TFile datafile("datafiles/clippedPulses.root");
+  TFile datafile("datafiles/exampleDatafile.root");
   TTree* tree = (TTree*) datafile.Get("t");
   float trace[1024];
   tree->SetBranchAddress("trace", trace);
@@ -40,7 +40,7 @@ int main(){
   for(int i = 0; i <tree->GetEntries(); ++i){
     tree->GetEntry(i);
 
-    fr.sum = pf.getSum(trace, 390, 100);
+    fr.sum = pf.getSum(trace,390,40);
     
     pf.fitSingle(trace);
     
