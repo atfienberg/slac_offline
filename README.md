@@ -69,25 +69,6 @@ The fitter also has functionality to do a baseline corrected analogue sum of the
 * getMin(int start, int length): same as above, except for min.
 * getMin(trace, int start, int length): same as above, except for min.
 
-CHANGING THE FIT FUNCTION
--------------------------
-
-Right now, the only way to change the fit function is to go into the source code. In pulseFitter.cxx, the first
-thing you see is a function called evalPulse(double t, double t0). This defines the fit function. To change it,
-define a new evalPulse function with the same arguments and return value as the old one. 
-Here are the rules to define a new function: 
-"t" is the time at which you are evaluating the pulse function.
-"t0" is a fit parameter (corresponds to parameter 0) which corresponds to where the pulse is in the trace.
-The rest of your fit parameters are lpg[i] with i starting at 2. Parameters 0 and 1 are reserved for 
-Time and Delta T in the case of a double pulse fit. 
-Do not include a baseline term or a normalization term in your function definition, the fitter
-handles these parameters separately. 
-
-There are two examples in the code now of functions you can use for fitting.
-
-If you change the function, always make sure you have an appropriate config file with a matching
-number of parameters.
-
 A NOTE ON EXTRACTING ENERGY
 ---------------------------
 
