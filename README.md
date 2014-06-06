@@ -42,6 +42,11 @@ See the src/exampleDriver.cxx for an example on how to use the fitter to fit a t
 
 * fitDouble(trace, error) is for fitting double pulses. It will free the Delta T parameter and attempt to fit for two pulses.
 
+A couple handy getters:
+
+* getFitStart(): returns the sample fit start that was read from the config file
+* getFitLength(): returns the fit length that was read from the config file
+
 After doing a fit, you can call the following functions to access fit results. 
 **Do not call any of the following without first doing a fit**
 
@@ -53,13 +58,16 @@ After doing a fit, you can call the following functions to access fit results.
 * getChi2(): returns chi2/ndf.
 * wasValidFit(): returns whether or not fitter converged successfuly
 * getIntegral(double start, double length): numerical integral of fit function. This can be slow depending on your function
-* getMaximum(): numerical maximum of fit function. This can be slow.
-* getMinimum(): numerical minimum of fit function. This can be slow.
+* getFunctionMaximum(): numerical maximum of fit function. This can be slow.
+* getFunctionMinimum(): numerical minimum of fit function. This can be slow.
 
 The fitter also has functionality to do a baseline corrected analogue sum of the trace:
-
-* getSum(trace, int start, int length): does analogue sum of "length" points starting with sample "start". Trace can be a float or an unsigned short.
-
+* getSum(int start, int length): does baseline corrected analogue sum of "length" points starting with sample "start". Uses the last baseline estimation. 
+* getSum(trace, int start, int length): calculates baseline and does baseline corrected analogue sum of "length" points starting with sample "start". Trace can be a float or an unsigned short.
+* getMax(int start, int length): finds the largest sample between start and start+length and subtracts the baseline. Uses the last baseline estimation.
+* getMax(trace, int start, int length): calculates the baseline and then returns baseline corrected maximum.
+* getMin(int start, int length): same as above, except for min.
+* getMin(trace, int start, int length): same as above, except for min.
 
 CHANGING THE FIT FUNCTION
 -------------------------
