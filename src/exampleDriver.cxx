@@ -13,7 +13,7 @@ int main(){
   new TApplication("app", 0, nullptr);
 
   //read inputfile
-  TFile datafile("datafiles/clippedPulses.root");
+  TFile datafile("datafiles/exampleDatafile.root");
   TTree* tree = (TTree*) datafile.Get("t");
   float trace[1024];
   tree->SetBranchAddress("trace", trace);

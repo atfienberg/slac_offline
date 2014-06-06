@@ -1,4 +1,4 @@
-CC = g++ -I. -I./src #Compiler
+CC = clang++ -I. -I./src #Compiler
 CFLAGS = -Wall -std=c++0x $(shell root-config --cflags)#Compiler Flags
 SOURCES = $(wildcard src/*.cxx) #Source Code Files
 OBJECTS = $(patsubst src/%.cxx,objects/%.o,$(SOURCES)) #Objects
