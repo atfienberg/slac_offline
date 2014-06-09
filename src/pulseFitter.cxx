@@ -15,6 +15,7 @@ Implementation for pulseFitter classes
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <cstdlib>
 
 //boost includes
 #include <boost/property_tree/ptree.hpp>
@@ -317,10 +318,14 @@ double pulseFitter::fitPulse(double* const trace, double error,
     waveform->Write();
     c1->Write();
     outf->Write();
-    cin.ignore();
+    cout << "Any key to continue, q to quit ... ";
+    char quitQuery = cin.get();
     delete c1;
     delete traceGraph;
     delete outf; 
+    if (quitQuery == 'q'){
+      exit(EXIT_SUCCESS);
+    }
   } 
   return chi2;
 }
@@ -414,7 +419,6 @@ double pulseFitter::pulseFitFunction::findMax(int start, int length){
     return 0;
   }
 
-  
   return *max_element(currentTrace+start, currentTrace+start+length) 
     - baseline;
 } 
