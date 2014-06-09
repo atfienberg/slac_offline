@@ -7,6 +7,7 @@
 #include <iostream>
 #include <time.h>
 #include <vector>
+#include <memory>
 
 //ROOT includes
 #include "TApplication.h"
@@ -65,14 +66,12 @@ int main(){
      
     else {
       deviceInfo thisDevice;
-      cout << tree.first << endl;
       thisDevice.name = tree.first;
       thisDevice.digitizer = tree.second.get<string>("digitizer");
       thisDevice.channel = tree.second.get<int>("channel");
       thisDevice.fit = tree.second.get<bool>("fit");
   
       devices.push_back(thisDevice);
-      cout << "---> " << thisDevice.name << endl;
     }
   } 
      
@@ -88,17 +87,15 @@ int main(){
   vector<fitResults> fr(devices.size());
   
   TTree outTree("t","t");
-  vector<pulseFitter*> fitters;
-  cout << "size " << devices.size() << endl;
+  vector< unique_ptr<pulseFitter> > fitters;
  
   for(unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(),&fr[i],"energy/D:chi2/D:sum/D:baseline/D:time/D:valid/O");
 
     //intialize fitters
     string config = string("configs/") + devices[i].name + string(".json");
-    cout << config << endl;
-    cout << devices[i].name << endl;
-    fitters.push_back(new pulseFitter((char*)config.c_str()));
+    fitters.push_back(unique_ptr< pulseFitter >
+		      (new pulseFitter((char*)config.c_str())));
   }
 
   clock_t t1,t2;
@@ -130,10 +127,6 @@ int main(){
 
   float diff ((float)t2-(float)t1);
   cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
-
-  for (const auto& fitter : fitters){
-    delete fitter;
-  }
 
   outTree.Write();
   delete tree; 
