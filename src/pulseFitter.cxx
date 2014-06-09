@@ -731,7 +731,6 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 }
 
 
-
 //template fit
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
   if((t-t0)>0&&(t-t0)<templateLength) 

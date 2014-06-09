@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
     fr.energy = pf.getScale();
     fr.baseline = pf.getBaseline();
     fr.chi2 = pf.getChi2();
-    fr.sum = -1*pf.getSum(s.trace[struckChannel],150,100);
+    //fr.sum = -1*pf.getSum(150,100);
     if(i%1000==0){
       cout << i << " done" << endl;
     }
