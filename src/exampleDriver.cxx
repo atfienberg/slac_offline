@@ -162,7 +162,8 @@ void crunch(const vector<deviceInfo>& devices,
 	fr[j].valid = fitters[j]->wasValidFit();
       }
     }
-
+    
     outTree.Fill();
   }
+
 }

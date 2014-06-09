@@ -14,6 +14,7 @@ Implementation for pulseFitter classes
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 //boost includes
 #include <boost/property_tree/ptree.hpp>
@@ -372,12 +373,9 @@ double pulseFitter::pulseFitFunction::evalSum(int start, int length){
     cerr << "Error in sum: invalid limits. " << endl;
     return 0;
   }
-
-  double runningSum = 0;
-  for(int i = 0; i < length; ++i){
-    runningSum = runningSum + currentTrace[start+i] - baseline;
-  }
-  return runningSum;
+  
+  return accumulate(currentTrace+start, currentTrace+start+length,0)
+     -baseline*length;
 }
 
 //return max of trace in given range
@@ -411,12 +409,13 @@ double pulseFitter::getMax(int start, int length){
 }
 
 double pulseFitter::pulseFitFunction::findMax(int start, int length){
-  if (start+length >= traceLength){
-    cerr << "Invalid limits for findMax!" << endl;
+  if(start<0 || ((start+length) > getTraceLength()) ){
+    cerr << "Error in getMax: invalid limits. " << endl;
     return 0;
   }
+
   
-  return *max_element(currentTrace+start, currentTrace+start+length-1) 
+  return *max_element(currentTrace+start, currentTrace+start+length) 
     - baseline;
 } 
 
@@ -452,11 +451,12 @@ double pulseFitter::getMin(int start, int length){
 }
 
 double pulseFitter::pulseFitFunction::findMin(int start, int length){
-  if(start+length>=traceLength){
-    cerr << "Invalid limits for findMin!" << endl;
+  if(start<0 || ((start+length) > getTraceLength()) ){
+    cerr << "Error in getMin: invalid limits. " << endl;
     return 0;
   }
-  return *min_element(currentTrace+start, currentTrace+length+start-1) - 
+
+  return *min_element(currentTrace+start, currentTrace+length+start) - 
     baseline;
 } 
 
