@@ -101,20 +101,23 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
       cout << "Run number " << tree.second.get<int>("") << endl;
      }
      
-    else {
-      deviceInfo thisDevice;
-      thisDevice.name = tree.first;
-      thisDevice.digitizer = tree.second.get<string>("digitizer");
-      thisDevice.channel = tree.second.get<int>("channel");
-      thisDevice.fit = tree.second.get<bool>("fit");
+    else if (tree.first == string("devices")){
+      //loop over devices
+      for(const auto& subtree : tree.second){
+	deviceInfo thisDevice;
+	thisDevice.name = subtree.first;
+	thisDevice.digitizer = subtree.second.get<string>("digitizer");
+	thisDevice.channel = subtree.second.get<int>("channel");
+	thisDevice.fit = subtree.second.get<bool>("fit");
   
-      devInfo.push_back(thisDevice);
+	devInfo.push_back(thisDevice);
       
-      cout << thisDevice.name << ": " <<
-	thisDevice.digitizer << " channel " <<
-	thisDevice.channel << endl;
-    }
-  }
+	cout << thisDevice.name << ": " <<
+	  thisDevice.digitizer << " channel " <<
+	  thisDevice.channel << endl;
+      }//end loop over devices
+    }//end else if
+  }//end loop over config file trees
 }
   
 void crunch(const vector<deviceInfo>& devices, 

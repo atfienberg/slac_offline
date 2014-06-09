@@ -379,8 +379,8 @@ double pulseFitter::pulseFitFunction::evalSum(int start, int length){
     return 0;
   }
   
-  return accumulate(currentTrace+start, currentTrace+start+length,0)
-     -baseline*length;
+  return accumulate(currentTrace+start, 
+		    currentTrace+start+length,-baseline*length);
 }
 
 //return max of trace in given range
