@@ -49,15 +49,52 @@ typedef struct {
   bool fit;
 } deviceInfo;
 
+//read the run config file, store info in devInfo
+void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig);
+
+//do the fits and fill the output tree
+void crunch(const vector<deviceInfo>& devices, 
+		   TTree* inTree, 
+		   TTree& outTree);
+
 int main(){
   new TApplication("app", 0, nullptr);
+  
+  //read in the run config file
+  vector<deviceInfo> devices;
+  readRunConfig(devices, (char*)"runConfigs/exampleRunConfig.json");  
+     
+  //read inputfile
+  TFile datafile("datafiles/newExampleDatafile.root");
+  TTree* inTree = (TTree*) datafile.Get("t");
+ 
+  //set up output file and output tree
+  TFile outf("exampleOut.root", "recreate");
+  TTree outTree("t","t");
+  
+  //do the fits
+  clock_t t1,t2;
+  t1 = clock();
+  crunch(devices, inTree, outTree);
+  t2 = clock();
 
+  float diff ((float)t2-(float)t1);
+  cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
+
+  //write the data
+  outTree.Write();
+  delete inTree; 
+  outf.Close();
+  datafile.Close();
+
+}
+
+void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
   //read in run config file
   boost::property_tree::ptree conf;
-  read_json((char*)"runConfigs/exampleRunConfig.json", conf);
+  read_json(runConfig, conf);
 
   //setup deviceInfo vector
-  vector<deviceInfo> devices;
   for(const auto& tree : conf){
      
     if (tree.first == string("run_number")){
@@ -71,24 +108,26 @@ int main(){
       thisDevice.channel = tree.second.get<int>("channel");
       thisDevice.fit = tree.second.get<bool>("fit");
   
-      devices.push_back(thisDevice);
+      devInfo.push_back(thisDevice);
+      
+      cout << thisDevice.name << ": " <<
+	thisDevice.digitizer << " channel " <<
+	thisDevice.channel << endl;
     }
-  } 
-     
-  //read inputfile
-  sis s;
-  TFile datafile("datafiles/newExampleDatafile.root");
-  TTree* tree = (TTree*) datafile.Get("t");
-  tree->SetBranchAddress("sis", &s);
- 
-  //set up output file and output tree
-  TFile outf("exampleOut.root", "recreate");
- 
-  vector<fitResults> fr(devices.size());
+  }
+}
   
-  TTree outTree("t","t");
+void crunch(const vector<deviceInfo>& devices, 
+	    TTree* inTree, 
+	    TTree& outTree){
+ 
+  sis s;
+  inTree->SetBranchAddress("sis", &s);
+  
+  vector<fitResults> fr(devices.size());
   vector< unique_ptr<pulseFitter> > fitters;
  
+  //initialize the fitters and the output tree
   for(unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(),&fr[i],"energy/D:chi2/D:sum/D:baseline/D:time/D:valid/O");
 
@@ -98,43 +137,32 @@ int main(){
 		      (new pulseFitter((char*)config.c_str())));
   }
 
-  clock_t t1,t2;
-  t1 = clock();
-  for(unsigned int i = 0; i <tree->GetEntries(); ++i){
-    tree->GetEntry(i);
+  //loop over each event 
+  for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
+    inTree->GetEntry(i);
     
+    //loop over each device 
     for(unsigned int j = 0; j < devices.size(); ++j){
-    
+      //get summary information from the trace
       fr[j].sum = fitters[j]->getSum(s.trace[0],
-				    fitters[j]->getFitStart(),
-				    fitters[j]->getFitLength());
+				     fitters[j]->getFitStart(),
+				     fitters[j]->getFitLength());
 
       fr[j].max = fitters[j]->getMax(fitters[j]->getFitStart(), 
-				    fitters[j]->getFitLength());
-
-      fitters[j]->fitSingle(s.trace[devices[j].channel]);
+				     fitters[j]->getFitLength());
+      
+      //do the fits
+      if(devices[j].fit){
+	fitters[j]->fitSingle(s.trace[devices[j].channel]);
     
-      fr[j].energy = fitters[j]->getScale();
-      fr[j].chi2 = fitters[j]->getChi2();
-      fr[j].baseline = fitters[j]->getBaseline();
-      fr[j].time = fitters[j]->getTime();
-      fr[j].valid = fitters[j]->wasValidFit();
+	fr[j].energy = fitters[j]->getScale();
+	fr[j].chi2 = fitters[j]->getChi2();
+	fr[j].baseline = fitters[j]->getBaseline();
+	fr[j].time = fitters[j]->getTime();
+	fr[j].valid = fitters[j]->wasValidFit();
+      }
     }
 
     outTree.Fill();
   }
-  t2 = clock();
-
-  float diff ((float)t2-(float)t1);
-  cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
-
-  outTree.Write();
-  delete tree; 
-  outf.Close();
-  datafile.Close();
-
 }
-
-  
-  
-  
