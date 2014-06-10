@@ -8,6 +8,7 @@
 #include <time.h>
 #include <vector>
 #include <memory>
+#include <cstdlib>
 
 //ROOT includes
 #include "TApplication.h"
@@ -34,13 +35,13 @@ typedef struct {
     double time;
     double max;
     bool valid;
-  } fitResults;
-
-typedef struct{
+} fitResults;
+ 
+typedef struct {
     unsigned long timestamp;
     unsigned short trace[8][1024];
     bool is_bad_event;
-  } sis;
+} sis;
 
 typedef struct {
   string name;
@@ -118,10 +119,20 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
       }//end loop over devices
     }//end else if
   }//end loop over config file trees
+  
+  //make sure there are no duplicate names
+  for (unsigned int i = 0; i < devInfo.size(); ++i){
+    for (unsigned int j = i+1; j<devInfo.size(); ++j){
+      if (devInfo[i].name == devInfo[j].name){
+	cout << "Duplicate device name: " << devInfo[i].name << endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+  }
 }
   
 void crunch(const vector<deviceInfo>& devices, 
-	    TTree* inTree, 
+ 	    TTree* inTree, 
 	    TTree& outTree){
  
   sis s;
@@ -168,5 +179,4 @@ void crunch(const vector<deviceInfo>& devices,
     
     outTree.Fill();
   }
-
 }
