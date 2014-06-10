@@ -1,20 +1,19 @@
 {
     "run_number":  1,   
-    
+
     "devices" : {    
 	"example_sipm" : {
 	    "digitizer"  : "struck",
 	    "channel"    : 0,
-	    "fit"        : true,
 	    "other"      : "stuff"
 	},
 
 	"example_sipm2" : {
 	    "digitizer"  : "struck",
 	    "channel"    : 1,
-	    "fit"        : true,
 	    "other"      : "stuff"
 	}
+	
     }
 }
     

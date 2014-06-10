@@ -16,6 +16,7 @@ Implementation for pulseFitter classes
 #include <iostream>
 #include <numeric>
 #include <cstdlib>
+#include <cassert>
 
 //boost includes
 #include <boost/property_tree/ptree.hpp>
@@ -56,15 +57,21 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   clipCutLow = digConfig.get<int>("clip_cut_low");
   separateBaselineFit = fitConfig.get<bool>("separate_baseline_fit");
 
-  //resize member vectors
-  lpg.resize(fitConfig.get<int>("n_parameters")); 
-  isGoodPoint.resize(fitLength);  
-  
   scale = 0;
   baseline = 0;
   templateFile = NULL;
   errorSpline = NULL;
   templateSpline = NULL;
+  isGoodPoint.resize(fitLength);  
+
+  bool fitConfigured = fitConfig.get<bool>("fit");
+  if(!fitConfigured)
+    return;
+
+  //resize member vectors
+  lpg.resize(fitConfig.get<int>("n_parameters")); 
+
+  
   
   //determine fit type and assign fit function accordingly
   string fitType = fitConfig.get<string>("fit_type");
@@ -124,6 +131,10 @@ pulseFitter::pulseFitter(char* config):
   auto fitConfig = conf.get_child("fit_specs");
   drawFit = fitConfig.get<bool>("draw");
 
+  fitConfigured = fitConfig.get<bool>("fit");
+  if(!isFitConfigured())
+    return;
+  
   //initialize ROOT functions and configure the fitter
   waveform = new TF1("fit", 
 		     &func, 
@@ -172,8 +183,10 @@ pulseFitter::pulseFitter(char* config):
 
 //pulseFitter destructor
 pulseFitter::~pulseFitter(){
-  delete waveform;
-  delete wwaveform;
+  if(isFitConfigured()){
+    delete waveform;
+    delete wwaveform;
+  }
 }
 
 //tries to fit a double pulse 
@@ -231,6 +244,7 @@ double pulseFitter::fitSingle(unsigned short* const trace, double error){
 //function that sets initial parameters for ROOT fitter and then calls the fitter
 double pulseFitter::fitPulse(double* const trace, double error, 
 			     bool isSingleFit){ 
+  assert(isFitConfigured());
   func.setError(error);  
 
   //loop over each function parameter for initial configuration

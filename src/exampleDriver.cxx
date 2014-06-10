@@ -47,7 +47,6 @@ typedef struct {
   string name;
   string digitizer;
   int channel;
-  bool fit;
 } deviceInfo;
 
 //read the run config file, store info in devInfo
@@ -108,9 +107,7 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
 	deviceInfo thisDevice;
 	thisDevice.name = subtree.first;
 	thisDevice.digitizer = subtree.second.get<string>("digitizer");
-	thisDevice.channel = subtree.second.get<int>("channel");
-	thisDevice.fit = subtree.second.get<bool>("fit");
-  
+	thisDevice.channel = subtree.second.get<int>("channel");  
 	devInfo.push_back(thisDevice);
       
 	cout << thisDevice.name << ": " <<
@@ -122,7 +119,7 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
   
   //make sure there are no duplicate names
   for (unsigned int i = 0; i < devInfo.size(); ++i){
-    for (unsigned int j = i+1; j<devInfo.size(); ++j){
+    for (unsigned int j = i + 1; j < devInfo.size(); ++j){
       if (devInfo[i].name == devInfo[j].name){
 	cout << "Duplicate device name: " << devInfo[i].name << endl;
 	exit(EXIT_FAILURE);
@@ -166,7 +163,7 @@ void crunch(const vector<deviceInfo>& devices,
 				     fitters[j]->getFitLength());
       
       //do the fits
-      if(devices[j].fit){
+      if(fitters[j]->isFitConfigured()){
 	fitters[j]->fitSingle(s.trace[devices[j].channel]);
     
 	fr[j].energy = fitters[j]->getScale();

@@ -49,6 +49,7 @@ public:
   double getFunctionMinimum() const { return waveform->GetMinimum(0,func.getTraceLength()); }
 
   //get back some fit parameters from the config file
+  bool isFitConfigured() const { return fitConfigured; }
   double getFitStart() const { return pulseFitStart; }
   double getFitLength() const { return fitLength; }
 
@@ -158,6 +159,7 @@ private:
   int pulseFitStart, fitLength;
 
   bool drawFit;
+  bool fitConfigured;
 
   std::vector<double> initialParGuesses;
   std::vector<double> parSteps;
