@@ -22,7 +22,7 @@ using namespace std;
 
 const int TEMPLATELENGTH = 200;
 const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 10;
+const int NTIMEBINS = 20;
 const int DEFAULTSTRUCKCHANNEL = 6;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
   
   //fill the timeslices and make the master fuzzy template
   TH2D masterFuzzyTemplate = TH2D("masterFuzzy", "Fuzzy Template", 
-			     TEMPLATELENGTH*NTIMEBINS, -.5-BUFFERZONE, TEMPLATELENGTH-.5-BUFFERZONE,
+			     TEMPLATELENGTH*NTIMEBINS, 0, TEMPLATELENGTH,
 				  1000,-.2*binRangeMax*abs(meanIntegral),binRangeMax*abs(meanIntegral));
 
   cout << "Populating timeslices... " << endl;
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
     if(thisSlice == NTIMEBINS) --thisSlice;
     double* ctrace = correctTrace(s.trace[struckChannel], summaries[i], meanIntegral);
     for(int j = 0; j<TEMPLATELENGTH; ++j){
-      masterFuzzyTemplate.Fill(j-realTime+0.5-BUFFERZONE, ctrace[j]);
+      masterFuzzyTemplate.Fill(j-realTime+1, ctrace[j]);
     }
     if(i % 1000 == 0){
       cout << "Trace " << i << " placed." << endl;
@@ -146,11 +146,11 @@ int main(int argc, char* argv[]) {
     // 			 xBinHist->GetMean());
     double mean = xBinHist->GetFunction("gaus")->GetParameter(1);
     double sig = xBinHist->GetFunction("gaus")->GetParameter(2);
-    errorGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS-BUFFERZONE-.5,
+    errorGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
 			sig);
-    masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS-BUFFERZONE-.5,
+    masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
 			 mean);
-    masterGraph.SetPointError(i,0,
+    masterGraph.SetPointError(i,static_cast<float>(i)/NTIMEBINS,
 			      sig);
     // errorVsMean.SetPoint(i,xBinHist->GetMean(),
     // 			 xBinHist->GetRMS());
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf("templateOut.root","recreate");
+  TFile outf("fuzzyTemplateOut.root","recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();

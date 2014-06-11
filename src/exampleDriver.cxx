@@ -168,10 +168,11 @@ void crunch(const vector<deviceInfo>& devices,
     
 	fr[j].energy = fitters[j]->getScale();
 	fr[j].chi2 = fitters[j]->getChi2();
-	fr[j].baseline = fitters[j]->getBaseline();
 	fr[j].time = fitters[j]->getTime();
 	fr[j].valid = fitters[j]->wasValidFit();
       }
+      fr[j].baseline = fitters[j]->getBaseline();
+      
     }
     
     outTree.Fill();

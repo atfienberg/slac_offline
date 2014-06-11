@@ -541,10 +541,10 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     thisPoint = currentTrace[pulseFitStart+i];
     if(isGoodPoint[i]){
       diff = thisPoint-(*this)(x, &lpg[0]); 
-      runningSum = runningSum + diff*diff/(error*error); 
+      runningSum = runningSum + diff*diff/(error*error);
     }
   }		       
-
+  
   return runningSum;
 }
 
@@ -751,7 +751,7 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 
 //template fit
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
-  if((t-t0)>0&&(t-t0)<templateLength) 
+  if((t-t0)>-40&&(t-t0)<templateLength) 
     return templateSpline->Eval(t-t0);
   else
     return 0;
