@@ -480,6 +480,7 @@ double pulseFitter::pulseFitFunction::findMin(int start, int length){
 
 //fill fitTrace with chopped fit trace
 void pulseFitter::fillFitTrace(double* fitTrace, int start, int length){
+  assert(isFitConfigured());
   for( int i = 0; i < length; ++i){
     fitTrace[i] = waveform->Eval(start+i);
   }
