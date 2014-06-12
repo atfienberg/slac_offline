@@ -27,20 +27,23 @@
 using namespace std;
 
 //define some datastructures
+
 typedef struct {
-    double energy;
-    double chi2;
-    double sum;
-    double baseline;
-    double time;
-    double max;
-    bool valid;
+  double trace[50];
+  double fitTrace[50];
+  double energy;
+  double sum;
+  double baseline;
+  double time;
+  double ampl;
+  double chi2;
+  bool valid;
 } fitResults;
- 
+
 typedef struct {
-    unsigned long timestamp;
-    unsigned short trace[8][1024];
-    bool is_bad_event;
+  unsigned long timestamp;
+  unsigned short trace[8][1024];
+  bool is_bad_event;
 } sis;
 
 typedef struct {
@@ -140,7 +143,8 @@ void crunch(const vector<deviceInfo>& devices,
  
   //initialize the fitters and the output tree
   for(unsigned int i = 0; i < devices.size(); ++i){
-    outTree.Branch(devices[i].name.c_str(),&fr[i],"energy/D:chi2/D:sum/D:baseline/D:time/D:valid/O");
+    outTree.Branch(devices[i].name.c_str(),&fr[i],
+     "trace[50]/D:fitTrace[50]/D:energy/D:sum/D:baseline/D:time/D:chi2/D:valid/O");
 
     //intialize fitters
     string config = string("configs/") + devices[i].name + string(".json");
@@ -154,12 +158,18 @@ void crunch(const vector<deviceInfo>& devices,
     
     //loop over each device 
     for(unsigned int j = 0; j < devices.size(); ++j){
+      //fill trace
+      for( int k = 0; k < 50; ++k){
+	fr[j].trace[k] = 
+	  s.trace[devices[j].channel][fitters[j]->getFitStart()+k];
+      }
+	  
       //get summary information from the trace
-      fr[j].sum = fitters[j]->getSum(s.trace[0],
+      fr[j].sum = fitters[j]->getSum(s.trace[devices[j].channel],
 				     fitters[j]->getFitStart(),
 				     fitters[j]->getFitLength());
 
-      fr[j].max = fitters[j]->getMax(fitters[j]->getFitStart(), 
+      fr[j].ampl = fitters[j]->getMax(fitters[j]->getFitStart(), 
 				     fitters[j]->getFitLength());
       
       //do the fits
@@ -170,6 +180,12 @@ void crunch(const vector<deviceInfo>& devices,
 	fr[j].chi2 = fitters[j]->getChi2();
 	fr[j].time = fitters[j]->getTime();
 	fr[j].valid = fitters[j]->wasValidFit();
+	
+	//fill fitTrace
+	fitters[j]->fillFitTrace(fr[j].fitTrace,
+				 fitters[j]->getFitStart(),
+				 50);
+	
       }
       fr[j].baseline = fitters[j]->getBaseline();
       

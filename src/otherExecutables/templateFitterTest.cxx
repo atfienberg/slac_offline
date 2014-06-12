@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
   fitResults fr;
   pulseFitter pf((char*)"configs/exampleTemplateConfig.json");
 
-  TFile* outf = new TFile("outfile.root","recreate");
+  TFile* outf = new TFile("templateOutfile.root","recreate");
   TTree* outTree = new TTree("t","t");
   outTree->Branch("fitResults",&fr,"energy/D:chi2/D:sum/D:baseline/D");
   

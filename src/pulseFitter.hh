@@ -50,8 +50,8 @@ public:
 
   //get back some fit parameters from the config file
   bool isFitConfigured() const { return fitConfigured; }
-  double getFitStart() const { return pulseFitStart; }
-  double getFitLength() const { return fitLength; }
+  int getFitStart() const { return pulseFitStart; }
+  int getFitLength() const { return fitLength; }
 
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
@@ -72,6 +72,9 @@ public:
   //max/min using currently stored trace and baseline info
   double getMax(int start, int length);
   double getMin(int start, int length);
+
+  //fill fitTrace with chopped fit trace
+  void fillFitTrace(double* fitTrace, int start, int length);
 
 private:
 
@@ -146,7 +149,7 @@ private:
     TFile* templateFile;
     TSpline3* templateSpline;
     TSpline3* errorSpline;
-    double templateLength = 200.0;
+    double templateLength = 100.0;
   };  
   pulseFitFunction func;
   

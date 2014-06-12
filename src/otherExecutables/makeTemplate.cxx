@@ -88,6 +88,10 @@ int main(int argc, char* argv[]) {
   double meanIntegral = integralHist.GetFunction("gaus")->GetParameter(1);
   pseudoTimesHist.Scale(1.0/pseudoTimesHist.Integral());
   
+  //temporary hack to re-implement normalization
+  meanIntegral = 1.0;
+  
+
   //find max for fuzzy template bin range
   normalizedMaxes.Fit("gaus","q0");
   double binRangeMax = normalizedMaxes.GetFunction("gaus")->GetParameter(1) + 

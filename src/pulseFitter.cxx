@@ -478,6 +478,13 @@ double pulseFitter::pulseFitFunction::findMin(int start, int length){
     baseline;
 } 
 
+//fill fitTrace with chopped fit trace
+void pulseFitter::fillFitTrace(double* fitTrace, int start, int length){
+  for( int i = 0; i < length; ++i){
+    fitTrace[i] = waveform->Eval(start+i);
+  }
+}
+
 //attach trace to the pulseFitFunction
 int pulseFitter::pulseFitFunction::setTrace(double* const trace){
   currentTrace = trace;
@@ -750,8 +757,10 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 
 
 //template fit
+//this is in a temporary state. the -40 is because template
+//is defined 40 bins before the max.
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
-  if((t-t0)>-40&&(t-t0)<templateLength) 
+  if((t-t0)>-40&&(t-t0)<(templateLength-40)) 
     return templateSpline->Eval(t-t0);
   else
     return 0;
