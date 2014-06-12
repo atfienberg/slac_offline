@@ -144,7 +144,7 @@ void crunch(const vector<deviceInfo>& devices,
   //initialize the fitters and the output tree
   for(unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(),&fr[i],
-     "trace[50]/D:fitTrace[50]/D:energy/D:sum/D:baseline/D:time/D:chi2/D:valid/O");
+     "trace[50]/D:fitTrace[50]/D:energy/D:sum/D:baseline/D:time/D:ampl/D:chi2/D:valid/O");
 
     //intialize fitters
     string config = string("configs/") + devices[i].name + string(".json");

@@ -308,6 +308,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
       cout << "Fresh Analogue sum: " << getSum(trace, getFitStart(), getFitLength()) << endl;
       cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
       cout << "Fresh Max: " << getMax(trace, getFitStart(), getFitLength()) << endl;
+      cout << "Max index: " << max_element(trace,trace+1024)-trace<< endl;
     }
     
     if(!isSingleFit){
