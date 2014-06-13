@@ -33,10 +33,10 @@ typedef struct {
   double trace[50];
   double fitTrace[50];
   double energy;
-  double sum;
+  double aSum;
   double baseline;
   double time;
-  double ampl;
+  double aAmpl;
   double chi2;
   bool valid;
 } fitResults;
@@ -158,7 +158,7 @@ void crunch(const vector<deviceInfo>& devices,
   //initialize the fitters and the output tree
   for(unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(),&fr[i],
-     "trace[50]/D:fitTrace[50]/D:energy/D:sum/D:baseline/D:time/D:ampl/D:chi2/D:valid/O");
+     "trace[50]/D:fitTrace[50]/D:energy/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O");
 
     //intialize fitters
     string config = string("configs/") + devices[i].name + string(".json");
@@ -187,11 +187,11 @@ void crunch(const vector<deviceInfo>& devices,
       }
 	  
       //get summary information from the trace
-      fr[j].sum = fitters[j]->getSum(s.trace[devices[j].channel],
+      fr[j].aSum = fitters[j]->getSum(s.trace[devices[j].channel],
 				     fitters[j]->getFitStart(),
 				     fitters[j]->getFitLength());
 
-      fr[j].ampl = fitters[j]->getMax(fitters[j]->getFitStart(), 
+      fr[j].aAmpl = fitters[j]->getMax(fitters[j]->getFitStart(), 
 				     fitters[j]->getFitLength());
       
       //do the fits
