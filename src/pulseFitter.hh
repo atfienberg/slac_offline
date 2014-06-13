@@ -156,7 +156,6 @@ private:
 
     TFile* templateFile;
     TSpline3* templateSpline;
-    TSpline3* errorSpline;
     double templateLength = 100.0;
   };  
   pulseFitFunction func;

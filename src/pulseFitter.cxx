@@ -60,7 +60,6 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
   scale = 0;
   baseline = 0;
   templateFile = NULL;
-  errorSpline = NULL;
   templateSpline = NULL;
   isGoodPoint.resize(fitLength);  
 
@@ -88,7 +87,6 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
     currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
     templateFile = new TFile("templateOut.root");
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
-    errorSpline = (TSpline3*)templateFile->Get("errorSpline");
   }
   
   else {
@@ -102,7 +100,6 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
 pulseFitter::pulseFitFunction::~pulseFitFunction(){
   if (templateFile!=NULL){ 
     delete templateSpline;
-    delete errorSpline;
     templateFile->Close();
     delete templateFile;
   }
