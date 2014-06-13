@@ -112,9 +112,6 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 pulseFitter::pulseFitter(char* config):
   func(config)
 {
-  pulseFitStart = func.getFitStart();
-  fitLength = func.getFitLength();
-
   //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs 
   xPoints.resize(func.getTraceLength());
   for(int i = 0; i<func.getTraceLength(); ++i){ 
@@ -316,12 +313,13 @@ double pulseFitter::fitPulse(double* const trace, double error,
       cout << "Baseline: " << getBaseline() << endl;
       cout << "Ratio: " << getRatio() << endl;
       cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
-      cout << "Analogue sum: " << getSum(trace, pulseFitStart, fitLength+20) << endl;
+      cout << "Analogue sum: " << getSum(trace, getFitStart(), getFitLength()+20) << endl;
     }
     TCanvas* c1 = new TCanvas("c1", "c1",0,0,1800,900);
     traceGraph->SetMarkerStyle(20);
     waveform->SetTitle(TString::Format(";time [%.2f nsec]; ADC Counts", 1.0/func.getSampleRate())); 
-    waveform->GetXaxis()->SetRangeUser(pulseFitStart,pulseFitStart+fitLength);
+    waveform->GetXaxis()->SetRangeUser(getFitStart(),
+				       getFitStart()+getFitLength());
     cout << "Param: " << waveform->GetParameter(0) << endl;
     waveform->Draw();
     traceGraph->Draw("psame");

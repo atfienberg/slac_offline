@@ -65,7 +65,7 @@ int main(){
   
   //read in the run config file
   vector<deviceInfo> devices;
-  readRunConfig(devices, (char*)"runConfigs/exampleRunConfig.json");  
+  readRunConfig(devices, (char*)"runJsons/run00001.json");  
      
   //read inputfile
   TFile datafile("datafiles/newExampleDatafile.root");
@@ -100,17 +100,24 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig){
   //setup deviceInfo vector
   for(const auto& tree : conf){
      
-    if (tree.first == string("run_number")){
-      cout << "Run number " << tree.second.get<int>("") << endl;
+    if (tree.first == string("run_info")){
+      cout << "Run number " << tree.second.get<int>("number") << endl;
      }
      
     else if (tree.first == string("devices")){
+      
       //loop over devices
       for(const auto& subtree : tree.second){
+	//check if it's a digitized device, if not skip to next one
+	if(!subtree.second.get_child_optional("digi_type")){
+	  continue;
+	}
+
 	deviceInfo thisDevice;
 	thisDevice.name = subtree.first;
-	thisDevice.digitizer = subtree.second.get<string>("digitizer");
-	thisDevice.channel = subtree.second.get<int>("channel");  
+	thisDevice.digitizer = subtree.second.get<string>("digi_type");
+	thisDevice.channel = subtree.second.get<int>("digi_channel");  
+	thisDevice.channel = 0; //temp for fake datafile
 	devInfo.push_back(thisDevice);
       
 	cout << thisDevice.name << ": " <<

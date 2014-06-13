@@ -50,8 +50,8 @@ public:
 
   //get back some fit parameters from the config file
   bool isFitConfigured() const { return fitConfigured; }
-  int getFitStart() const { return pulseFitStart; }
-  int getFitLength() const { return fitLength; }
+  int getFitStart() const { return func.getFitStart(); }
+  int getFitLength() const { return func.getFitLength(); }
 
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
@@ -76,6 +76,10 @@ public:
   //fill fitTrace with chopped fit trace
   void fillFitTrace(double* fitTrace, int start, int length);
 
+  //setters to update fit length and start dynamically
+  void setFitStart(int start) {func.setFitStart(start);}
+  void setFitLength(int length) {func.setFitLength(length);}
+
 private:
 
   /* the function that the pulseFitter uses to fit traces (with the defined () operator)  */
@@ -89,6 +93,10 @@ private:
     //returns number of good data points in the range
     int setTrace(double* const trace);
   
+    //setters to update fit length and start dynamically
+    void setFitStart(int start) {pulseFitStart = start;}
+    void setFitLength(int length) {fitLength = length;}
+
     //finds baseline by looking at island before the trace
     void findBaseline();
 
@@ -159,7 +167,6 @@ private:
 		  bool isSingleFit);
 
   std::vector<double> xPoints;
-  int pulseFitStart, fitLength;
 
   bool drawFit;
   bool fitConfigured;
