@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include <cstdlib>
+#include <string>
 
 //ROOT includes
 #include "TApplication.h"
@@ -59,6 +60,12 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig);
 void crunch(const vector<deviceInfo>& devices, 
 		   TTree* inTree, 
 		   TTree& outTree);
+
+//check if a file exists
+bool exists(const string& name) {
+  struct stat buffer;   
+  return (stat (name.c_str(), &buffer) == 0); 
+}
 
 int main(){
   new TApplication("app", 0, nullptr);
@@ -155,8 +162,16 @@ void crunch(const vector<deviceInfo>& devices,
 
     //intialize fitters
     string config = string("configs/") + devices[i].name + string(".json");
-    fitters.push_back(unique_ptr< pulseFitter >
-		      (new pulseFitter((char*)config.c_str())));
+    if(exists(config)){
+      fitters.push_back(unique_ptr< pulseFitter >
+			(new pulseFitter((char*)config.c_str())));
+    }
+    else{
+      cout << config << " not found. "
+	   << "Using default config." << endl;
+      fitters.push_back(unique_ptr< pulseFitter >
+			(new pulseFitter()));
+    }
   }
 
   //loop over each event 
