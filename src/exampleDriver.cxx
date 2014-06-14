@@ -27,11 +27,12 @@
 
 using namespace std;
 
-//define some datastructures
+const int CHOPPED_TRACE_LENGTH = 50;
 
+//define some datastructures
 typedef struct {
-  double trace[50];
-  double fitTrace[50];
+  double trace[CHOPPED_TRACE_LENGTH];
+  double fitTrace[CHOPPED_TRACE_LENGTH];
   double energy;
   double aSum;
   double baseline;
@@ -60,6 +61,18 @@ void readRunConfig(vector<deviceInfo>& devInfo, char* runConfig);
 void crunch(const vector<deviceInfo>& devices, 
 		   TTree* inTree, 
 		   TTree& outTree);
+
+//init for struck devices
+void initStruck(TTree& outTree, 
+		const vector<deviceInfo>& devices,
+		vector<fitResults>& fr,
+		vector< unique_ptr<pulseFitter> >& fitters);
+
+//crunch through struck devices for a given event
+void crunchStruck(sis& s, 
+		  const vector<deviceInfo>& devices,
+		  vector<fitResults>& fr,
+		  vector< unique_ptr<pulseFitter> >& fitters); 
 
 //check if a file exists
 bool exists(const string& name) {
@@ -152,20 +165,39 @@ void crunch(const vector<deviceInfo>& devices,
   sis s;
   inTree->SetBranchAddress("sis", &s);
   
+  //initialization routines
   vector<fitResults> fr(devices.size());
   vector< unique_ptr<pulseFitter> > fitters;
- 
-  //initialize the fitters and the output tree
+  initStruck(outTree, devices, fr, fitters);
+
+  //loop over each event 
+  for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
+    inTree->GetEntry(i);
+    crunchStruck(s, devices, fr, fitters);
+    outTree.Fill();
+  }
+}
+
+void initStruck(TTree& outTree, 
+		const vector<deviceInfo>& devices,
+		vector<fitResults>& fr,
+		vector< unique_ptr<pulseFitter> >& fitters){
+  //initialize output tree branches for struck devices
   for(unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(),&fr[i],
-     "trace[50]/D:fitTrace[50]/D:energy/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O");
+      Form("trace[%i]/D:fitTrace[%i]/D:energy/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O",
+	   CHOPPED_TRACE_LENGTH, CHOPPED_TRACE_LENGTH));    
+  }
 
-    //intialize fitters
+  //intialize struck fitters
+  for(unsigned int i = 0; i < devices.size(); ++i){
     string config = string("configs/") + devices[i].name + string(".json");
+
     if(exists(config)){
       fitters.push_back(unique_ptr< pulseFitter >
 			(new pulseFitter((char*)config.c_str())));
-    }
+    } 
+
     else{
       cout << config << " not found. "
 	   << "Using default config." << endl;
@@ -174,45 +206,45 @@ void crunch(const vector<deviceInfo>& devices,
     }
   }
 
-  //loop over each event 
-  for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
-    inTree->GetEntry(i);
-    
-    //loop over each device 
-    for(unsigned int j = 0; j < devices.size(); ++j){
-      //fill trace
-      for( int k = 0; k < 50; ++k){
-	fr[j].trace[k] = 
-	  s.trace[devices[j].channel][fitters[j]->getFitStart()+k];
-      }
-	  
-      //get summary information from the trace
-      fr[j].aSum = fitters[j]->getSum(s.trace[devices[j].channel],
-				     fitters[j]->getFitStart(),
-				     fitters[j]->getFitLength());
+}
 
-      fr[j].aAmpl = fitters[j]->getMax(fitters[j]->getFitStart(), 
+void crunchStruck(sis& s, 
+		  const vector<deviceInfo>& devices,
+		  vector<fitResults>& fr,
+		  vector< unique_ptr<pulseFitter> >& fitters){
+  
+    
+  //loop over each device 
+  for(unsigned int j = 0; j < devices.size(); ++j){
+    //fill trace
+    for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
+      fr[j].trace[k] = 
+	s.trace[devices[j].channel][fitters[j]->getFitStart()+k];
+    }
+     
+    //get summary information from the trace
+    fr[j].aSum = fitters[j]->getSum(s.trace[devices[j].channel],
+				    fitters[j]->getFitStart(),
+				    fitters[j]->getFitLength());
+
+    fr[j].aAmpl = fitters[j]->getMax(fitters[j]->getFitStart(), 
 				     fitters[j]->getFitLength());
       
-      //do the fits
-      if(fitters[j]->isFitConfigured()){
-	fitters[j]->fitSingle(s.trace[devices[j].channel]);
+    //do the fits
+    if(fitters[j]->isFitConfigured()){
+      fitters[j]->fitSingle(s.trace[devices[j].channel]);
     
-	fr[j].energy = fitters[j]->getScale();
-	fr[j].chi2 = fitters[j]->getChi2();
-	fr[j].time = fitters[j]->getTime();
-	fr[j].valid = fitters[j]->wasValidFit();
+      fr[j].energy = fitters[j]->getScale();
+      fr[j].chi2 = fitters[j]->getChi2();
+      fr[j].time = fitters[j]->getTime();
+      fr[j].valid = fitters[j]->wasValidFit();
 	
-	//fill fitTrace
-	fitters[j]->fillFitTrace(fr[j].fitTrace,
-				 fitters[j]->getFitStart(),
-				 50);
-	
-      }
-      fr[j].baseline = fitters[j]->getBaseline();
-      
+      //fill fitTrace
+      fitters[j]->fillFitTrace(fr[j].fitTrace,
+			       fitters[j]->getFitStart(),
+			       CHOPPED_TRACE_LENGTH);
+       
     }
-    
-    outTree.Fill();
+    fr[j].baseline = fitters[j]->getBaseline();      
   }
 }
