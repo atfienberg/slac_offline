@@ -139,7 +139,7 @@ int main(){
   cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
 
   //write the data
-  outTree.Write();
+  outf.Write();
   delete inTree; 
   outf.Close();
   datafile.Close();
@@ -228,6 +228,7 @@ void crunch(const runInfo& rInfo,
   initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
   
   vector<adcResults> ar;
+  unsigned short temp;
   initAdc(outTree, rInfo.adcInfo, ar);
   
   
@@ -236,6 +237,7 @@ void crunch(const runInfo& rInfo,
     inTree->GetEntry(i);
     crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
     crunchStruck(s, rInfo.struckInfo, sr, sFitters);
+    crunchAdc(&temp, rInfo.adcInfo, ar); 
     outTree.Fill();
   }
 }
@@ -333,11 +335,11 @@ void crunchStruckS(struck& s,
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
 	     vector<adcResults>& ar){
-  
+  //stub
 }
 
 void crunchAdc(const unsigned short* adc,
 	       const vector<deviceInfo>& devices,
 	       vector<adcResults>& ar){
-
+  //stub
 }
