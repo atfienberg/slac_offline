@@ -8,6 +8,7 @@
   
   "fit_specs": {
     "fit_type"          : "beam",
+    "fit"               : false,
     "n_parameters"      :6,
     "parameter_names"   : ["Time", "Delta T", "Device Ramp", "Device Decay", 
        "Source Ramp", "Source Decay"],	
