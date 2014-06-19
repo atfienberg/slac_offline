@@ -1,45 +1,55 @@
 {
     "devices": {
-        "calo01": {
+        "sipm22": {
             "crystal_id": 14,
             "crystal_location": 11,
             "detector_id": 24,
             "detector_type": "sipm",
-            "digi_channel": 5,
+            "channel": 5,
             "digi_module": 1,
-            "digi_type": "struck"
+            "module": "struck"
         },
-        "calo02": {
+        "sipm23": {
             "crystal_id": 11,
             "crystal_location": 25,
             "detector_id": 20,
             "detector_type": "sipm",
-            "digi_channel": 3,
+            "channel": 3,
             "digi_module": 1,
-            "digi_type": "struck"
+            "module": "struck"
         },
         "mwpcA1": {
-            "adc_channel": 1,
+	    "module"     : "adc",
+            "channel": 1,
             "detector_type": "anode"
         },
         "mwpcC1": {
-            "adc_channel": 5,
+	    "module"     : "adc",
+            "channel": 5,
             "detector_type": "cathode"
         },
-        "trig01": {
+        "trig1": {
             "detector_id": 1,
             "detector_type": "pmt",
-            "digi_channel": 5,
+            "channel": 5,
             "digi_module": 1,
-            "digi_type": "struck"
+            "module": "struck"
         },
-        "trig02": {
+        "trig2": {
             "detector_id": 2,
             "detector_type": "pmt",
-            "digi_channel": 3,
+            "channel": 3,
             "digi_module": 1,
-            "digi_type": "struck"
-        }
+            "module": "struck"
+        },
+	"beamFlag": {
+	    "module": "struckS",
+	    "channel": 0
+	},
+	"laserFlag": {
+	    "module": "struckS",
+	    "channel": 0
+	}
     },
     "run_info": {
         "number": "00001"

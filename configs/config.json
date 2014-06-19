@@ -1,0 +1,40 @@
+{
+  "file": {
+    "name":"fit_config.json",
+    "date":"2013/11/13"
+    },
+
+  "digitizer_specs": {
+    "sample_rate"        :5,
+    "trace_length"       :1024    
+    },
+  
+  "fit_specs": {
+    "sipm_ramp_guess"    :3.82,
+    "sipm_decay_guess"   :5.72,
+    "sipm_position_guess":130,
+    "sipm_amp_guess"     :22000,
+    "slow_decay_guess"   :0,
+    "ratio_guess"        :0,
+    "light_width"        :10.0,
+    "pulse_fit_start"    :120,
+    "pulse_fit_end"      :152,
+    "draw_fit"           :false,
+    "fix_ramp"           :false
+    },
+
+ "area_specs": {
+   "integral_start"      :400,
+   "integral_end"        :800,
+   "baseline_fit_start"  :100,
+   "baseline_fit_end"    :300,
+   "baseline_min"        :-3500,
+   "baseline_max"        :-3000,
+   "baseline_slope_min"  :-0.01,
+   "baseline_slope_max"  :0.01,  
+   "integral_length"     :100,
+   "baseline_fit_length" :25,
+   "draw_area"           :false
+  }
+   	
+}

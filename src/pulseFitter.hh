@@ -119,7 +119,8 @@ private:
   private:
     //private helper functions
     double evalPulse(double t, double t0);
-    double dotProduct(const std::vector<double>& v1, const std::vector<double>& v2); //mws: line length
+    double dotProduct(const std::vector<double>& v1, 
+		      const std::vector<double>& v2); 
     double componentSum(const std::vector<double>& v);
     int checkPoints();
     void updateScale();

@@ -42,6 +42,18 @@ typedef struct {
   bool valid;
 } struckResults;
 
+typedef struct {
+  string name;
+  string module;
+  int channel;
+} deviceInfo;
+
+typedef struct{
+  vector<deviceInfo> struckInfo;
+  vector<deviceInfo> struckSInfo;
+  vector<deviceInfo> adcInfo;
+} runInfo;
+
 //temp placeholders
 typedef struct{
   bool q;
@@ -54,17 +66,6 @@ typedef struct {
   bool is_bad_event;
 } struck;
 
-typedef struct {
-  string name;
-  string module;
-  int channel;
-} deviceInfo;
-
-typedef struct{
-  vector<deviceInfo> struckInfo;
-  vector<deviceInfo> struckSInfo;
-  vector<deviceInfo> adcInfo;
-} runInfo;
 
 //read the run config file, store info in devInfo
 void readRunConfig(runInfo& rInfo, char* runConfig);
@@ -327,6 +328,7 @@ void crunchStruckS(struck& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
 		   vector< unique_ptr<pulseFitter> >& slFitters){
+ 
   srSlow[0].q = static_cast<bool>(clock()%2);
   srSlow[1].q = !srSlow[0].q;
 }
