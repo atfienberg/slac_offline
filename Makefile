@@ -22,21 +22,9 @@ $(TARGET): $(OBJECTS)
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-makeTemplate: objects/makeTemplate.o
-	@echo Linking $@
-	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
-
-templateFitterTest: objects/templateFitterTest.o objects/pulseFitter.o
-	@echo Linking $@
-	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
-
-objects/templateFitterTest.o: src/otherExecutables/templateFitterTest.cxx objects/pulseFitter.o
-	@echo Building $@
-	$(CC) $(CFLAGS) $< -c -o $@
-
-objects/makeTemplate.o: src/otherExecutables/makeTemplate.cxx
-	@echo Building $@
-	$(CC) $(CFLAGS) $< -c -o $@
+.DEFAULT: src/otherExecutables/$@.cxx
+	@echo Linking and building $@
+	$(CC) $(CFLAGS) $^ src/otherExecutables/$@.cxx -o $@ $(ROOTLIBS)
 
 objects/%.o: src/%.cxx
 	@echo Building $@
