@@ -20,19 +20,12 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 300;
-const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 10;
-const int DEFAULTSTRUCKCHANNEL = 6;
+const int TEMPLATELENGTH = 150;
+const int NBINSPSEUDOTIME = 100;
+const int NTIMEBINS = 1;
 const int TRACELENGTH = 1024;
-const int BASELINEFITLENGTH = 50;
+const int BASELINEFITLENGTH = 20;
 const int BUFFERZONE = 40;
-
-struct s_sis{
-  unsigned long long timestamp[8];
-  unsigned short trace[8][0x400];
-  bool is_bad_event;
-};
 
 typedef struct traceSummary{
   double pseudoTime;
@@ -46,27 +39,26 @@ typedef struct traceSummary{
 
 traceSummary processTrace(unsigned short* trace);
 double* correctTrace(unsigned short* trace, traceSummary summary, double meanIntegral);
+void filterTrace(unsigned short* trace);
 
 int main(int argc, char* argv[]) {
   clock_t t1,t2;
   t1 = clock();
   
-  if(argc<2){
-    cout << "need to input datafile." << endl;
+  if(argc<3){
+    cout << "need to input datafile and output file." << endl;
     return -1;
   }
-  
-  int struckChannel = DEFAULTSTRUCKCHANNEL;
-  if(argc == 3){
-    struckChannel = atoi(argv[2]);
-  }
-  
+
   //read input file
   gSystem->Load("libTree");
   TFile infile(argv[1]);
-  TTree* t = (TTree*) infile.Get("t");
-  struct s_sis s;
-  t->SetBranchAddress("sis", &s);
+  TTree* t = (TTree*) infile.Get("WFDTree");
+  TBranch* branch = t->GetBranch("Channel1");
+  unsigned short ch1[1024];
+  branch->SetAddress(&ch1);
+  cout << branch -> GetEntries() << " pulses." << endl;
+  
   
   //process traces
   cout << "Processing traces... " << endl;
@@ -76,7 +68,8 @@ int main(int argc, char* argv[]) {
   TH1D integralHist("integrals","integrals",100,0.0,0.0);
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
-    summaries[i] = processTrace(s.trace[struckChannel]);
+    filterTrace(ch1);
+    summaries[i] = processTrace(ch1);
     pseudoTimesHist.Fill(summaries[i].pseudoTime);
     normalizedMaxes.Fill(summaries[i].normalizedAmpl);
     integralHist.Fill(summaries[i].integral);
@@ -116,13 +109,14 @@ int main(int argc, char* argv[]) {
   cout << "Populating timeslices... " << endl;
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
+    filterTrace(ch1);
     if(summaries[i].bad){
       continue;
     }
     double realTime = rtSpline.Eval(summaries[i].pseudoTime);
     int thisSlice = static_cast<int>(realTime*NTIMEBINS);
     if(thisSlice == NTIMEBINS) --thisSlice;
-    double* ctrace = correctTrace(s.trace[struckChannel], summaries[i], meanIntegral);
+    double* ctrace = correctTrace(ch1, summaries[i], meanIntegral);
     for(int j = 0; j<TEMPLATELENGTH; ++j){
       masterFuzzyTemplate.Fill(j-realTime+0.5-BUFFERZONE, ctrace[j]);
     }
@@ -171,7 +165,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf("templateOut.root","recreate");
+  TFile outf(Form("%s.root",argv[2]),"recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();
@@ -180,6 +174,8 @@ int main(int argc, char* argv[]) {
   masterSpline.Write();
   errorSpline.Write();
   errorVsMean.Write();
+  integralHist.Write();
+  normalizedMaxes.Write();
   outf.Write();
   outf.Close();
 
@@ -201,7 +197,7 @@ traceSummary processTrace(unsigned short* trace){
     mindex = trace[i] < trace[mindex] ? i : mindex;
   }
   results.peakIndex = mindex;
-  
+
   //calculate pseudotime
   if(trace[mindex]==trace[mindex+1]) results.pseudoTime = 1;
   else{
@@ -247,3 +243,13 @@ double* correctTrace(unsigned short* trace, traceSummary summary, double meanInt
   }
   return correctedTrace;
 }
+
+//rebin trace by 2 stored in first half of entries, second half is untouched
+void filterTrace(unsigned short* trace){
+  for(int i = 0; i < TRACELENGTH/2; ++ i){
+    trace[2*i] = (trace[2*i]+trace[2*i+1])*1/2;
+  }
+  for(int i = 0; i < TRACELENGTH/2; ++i){
+    trace[2*i+1] = (trace[2*i]+trace[2*i+2])/2;
+  }
+}  

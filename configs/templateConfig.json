@@ -7,15 +7,21 @@
     },
   
   "fit_specs": {
-    "n_parameters"      :   2,	 	
+    "fit_type"          : "template",
+    "template_file"     : "greaseTemp.root",
+    "template_buffer"   : 60,
+    "fit"               : true,
+    "n_parameters"      :    2,	 	
     "parameter_names"   : ["time", "Delta T"],
     "free_parameter"    : [true, false],
-    "parameter_guesses" : [90 ,0.0 ],
+    "parameter_guesses" : [200.0 ,0.0],
     "parameter_steps"   : [0.1, 0.1],
-    "parameter_mins"    : [85, 0.1],
-    "parameter_maxes"   : [120, 20],
-    "fit_start"         :90,
-    "fit_length"        :80,
+    "parameter_mins"    : [190, 0.1],
+    "parameter_maxes"   : [220, 20],
+    "fit_start"         :180,
+    "fit_length"        :60,
+    "base_fit_length"   :40,
+    "base_fit_buffer"   :40,
     "separate_baseline_fit"   : false,
     "draw"              :true
     }

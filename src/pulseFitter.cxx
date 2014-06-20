@@ -85,7 +85,9 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
 
   else if (fitType == string("template")){
     currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
-    templateFile = new TFile("templateOut.root");
+    string tempFile = fitConfig.get<string>("template_file");
+    templateBuffer = fitConfig.get<int>("template_buffer");
+    templateFile = new TFile(tempFile.c_str());
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
   }
   
@@ -757,7 +759,7 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 //this is in a temporary state. the -40 is because template
 //is defined 40 bins before the max.
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
-  if((t-t0)>-40&&(t-t0)<(templateLength-40)) 
+  if((t-t0)>-1*templateBuffer&&(t-t0)<(templateLength-templateBuffer)) 
     return templateSpline->Eval(t-t0);
   else
     return 0;

@@ -9,11 +9,16 @@
 
 using namespace std;
 
-int main(){
+int main(int argc, char* argv[]){
+  if(argc<2){
+    cout << "need datafile." << endl;
+    return -1;
+  }
+
   new TApplication("app", 0, nullptr);
-  pulseFitter pf((char*)"configs/templateConfig.json",true);
+  pulseFitter pf((char*)"configs/templateConfig.json");
   //pulseFitter pf((char*)"configs/kazconfig.json");
-  TFile* datafile = new TFile("datafiles/nitrogen_laser_calibration_filter1.root");
+  TFile* datafile = new TFile(argv[1]);
   TFile* outf = new TFile("outfile.root","recreate");
   TTree* tree = (TTree*) datafile->Get("WFDTree");
   unsigned short trace[1024];
