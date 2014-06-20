@@ -25,7 +25,7 @@ const int NBINSPSEUDOTIME = 100;
 const int NTIMEBINS = 1;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 20;
-const int BUFFERZONE = 40;
+const int BUFFERZONE = 60;
 
 typedef struct traceSummary{
   double pseudoTime;
