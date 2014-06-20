@@ -22,9 +22,9 @@ $(TARGET): $(OBJECTS)
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-.DEFAULT: src/otherExecutables/$@.cxx
+%: src/otherExecutables/%.cxx
 	@echo Linking and building $@
-	$(CC) $(CFLAGS) $^ src/otherExecutables/$@.cxx -o $@ $(ROOTLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
 objects/%.o: src/%.cxx
 	@echo Building $@
