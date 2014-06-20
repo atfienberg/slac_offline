@@ -87,6 +87,7 @@ pulseFitter::pulseFitFunction::pulseFitFunction(char* config){
     currentFitFunction = &pulseFitter::pulseFitFunction::templateFit;
     string tempFile = fitConfig.get<string>("template_file");
     templateBuffer = fitConfig.get<int>("template_buffer");
+    templateLength = fitConfig.get<int>("template_length");
     templateFile = new TFile(tempFile.c_str());
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
   }
