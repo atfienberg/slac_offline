@@ -22,7 +22,7 @@ $(TARGET): $(OBJECTS)
 	@echo Linking $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-%: src/otherExecutables/%.cxx
+%: src/otherExecutables/%.cxx objects/pulseFitter.o
 	@echo Linking and building $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 

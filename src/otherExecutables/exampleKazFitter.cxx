@@ -10,8 +10,8 @@
 using namespace std;
 
 int main(int argc, char* argv[]){
-  if(argc<2){
-    cout << "need datafile." << endl;
+  if(argc<3){
+    cout << "need datafile and output file" << endl;
     return -1;
   }
 
@@ -19,7 +19,7 @@ int main(int argc, char* argv[]){
   pulseFitter pf((char*)"configs/templateConfig.json");
   //pulseFitter pf((char*)"configs/kazconfig.json");
   TFile* datafile = new TFile(argv[1]);
-  TFile* outf = new TFile("outfile.root","recreate");
+  TFile* outf = new TFile(Form("%s.root",argv[2]),"recreate");
   TTree* tree = (TTree*) datafile->Get("WFDTree");
   unsigned short trace[1024];
 
