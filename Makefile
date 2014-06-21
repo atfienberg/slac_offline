@@ -16,7 +16,7 @@ SOURCES = $(wildcard src/*.cxx) #Source Code Files
 OBJECTS = $(patsubst src/%.cxx,objects/%.o,$(SOURCES)) #Objects
 ROOTLIBS = $(shell root-config --libs) 
 ROOT_DICT = objects/root_dict.o
-TARGET =  exampleDriver
+TARGET =  slacAnalyzer
 
 $(TARGET): $(OBJECTS) 
 	@echo Linking $@

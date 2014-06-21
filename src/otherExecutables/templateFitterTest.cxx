@@ -45,12 +45,12 @@ int main(int argc, char* argv[]){
   t->SetBranchAddress("sis", &s);
 
   fitResults fr;
-  pulseFitter pf((char*)"configs/exampleTemplateConfig.json");
 
   TFile* outf = new TFile("templateOutfile.root","recreate");
   TTree* outTree = new TTree("t","t");
   outTree->Branch("fitResults",&fr,"energy/D:chi2/D:sum/D:baseline/D");
-  
+  pulseFitter pf((char*)"configs/exampleTemplateConfig.json");
+
   clock_t t1,t2;
   t1 = clock();
 
@@ -73,7 +73,6 @@ int main(int argc, char* argv[]){
   cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
 
   cout << outTree->GetEntries() << " successful fits" << endl;
-  outTree->Write();
   outf->Write();
   
   delete outTree;

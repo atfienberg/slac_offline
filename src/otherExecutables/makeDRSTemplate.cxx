@@ -20,7 +20,7 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 150;
+const int TEMPLATELENGTH = 200;
 const int NBINSPSEUDOTIME = 100;
 const int NTIMEBINS = 1;
 const int TRACELENGTH = 1024;
@@ -244,12 +244,15 @@ double* correctTrace(unsigned short* trace, traceSummary summary, double meanInt
   return correctedTrace;
 }
 
-//rebin trace by 2 stored in first half of entries, second half is untouched
+//try to filter out weird drs noise
 void filterTrace(unsigned short* trace){
-  for(int i = 0; i < TRACELENGTH/2; ++ i){
+  for(int i = 0; i < 1024/2; ++ i){
     trace[2*i] = (trace[2*i]+trace[2*i+1])*1/2;
   }
-  for(int i = 0; i < TRACELENGTH/2; ++i){
-    trace[2*i+1] = (trace[2*i]+trace[2*i+2])/2;
+  for(int i = 0; i < 1024/2; ++i){
+    if(i!=1024/2-1)
+      trace[2*i+1] = (trace[2*i]+trace[2*i+2])/2;
+    else
+      trace[2*i+1] = trace[2*i];
   }
 }  
