@@ -26,9 +26,12 @@ $(TARGET): $(OBJECTS)
 	@echo Linking and building $@
 	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
-objects/%.o: src/%.cxx
+objects/%.o: src/%.cxx objects/
 	@echo Building $@
 	$(CC) $(CFLAGS) $< -c -o $@
+
+objects/:
+	mkdir objects
 
 clean:
 	rm objects/*
