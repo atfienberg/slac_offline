@@ -115,19 +115,25 @@ bool exists(const string& name) {
   return (stat (name.c_str(), &buffer) == 0); 
 }
 
-int main(){
+int main(int argc, char* argv[]) {
   new TApplication("app", 0, nullptr);
   
+  if (argc<4){
+    cout << "usage: ./slacAnalyzer [inputfile] [configfile] [outputfile]"
+	 << endl;
+    exit(EXIT_FAILURE);
+  }
+
   //read in the run config file
   runInfo rInfo;
-  readRunConfig(rInfo, (char*)"runJsons/run00001.json");  
+  readRunConfig(rInfo, argv[2]);  
      
   //read inputfile
-  TFile datafile("datafiles/newExampleDatafile.root");
+  TFile datafile(argv[1]);
   TTree* inTree = (TTree*) datafile.Get("t");
  
   //set up output file and output tree
-  TFile outf("exampleOut.root", "recreate");
+  TFile outf(argv[3], "recreate");
   TTree outTree("t","t");
   
   //do the fits
