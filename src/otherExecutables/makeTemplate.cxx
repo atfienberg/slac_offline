@@ -51,14 +51,14 @@ int main(int argc, char* argv[]) {
   clock_t t1,t2;
   t1 = clock();
   
-  if(argc<2){
-    cout << "need to input datafile." << endl;
+  if(argc<3){
+    cout << "usage: ./makeTemplate [inputfile] [outputfile] [struckChannel]" << endl;
     return -1;
   }
   
   int struckChannel = DEFAULTSTRUCKCHANNEL;
-  if(argc == 3){
-    struckChannel = atoi(argv[2]);
+  if(argc == 4){
+    struckChannel = atoi(argv[3]);
   }
   
   //read input file
@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf("templateOut.root","recreate");
+  TFile outf(argv[2],"recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();
