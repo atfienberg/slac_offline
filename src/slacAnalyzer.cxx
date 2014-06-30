@@ -44,7 +44,8 @@ typedef struct {
 
 typedef struct {
   string name;
-  string module;
+  string moduleType;
+  int moduleNum;
   int channel;
 } deviceInfo;
 
@@ -61,11 +62,16 @@ typedef struct{
 typedef int adcResults;
 
 typedef struct {
-  unsigned long timestamp;
-  unsigned short trace[8][1024];
-  bool is_bad_event;
-} struck;
+  unsigned long system_clock;
+  unsigned long device_clock[4];
+  unsigned short trace[4][1024];
+} sis_fast;
 
+typedef struct {
+  unsigned long system_clock;
+  unsigned long device_clock[8];
+  unsigned short trace[8][1024];
+} sis_slow;
 
 //read the run config file, store info in devInfo
 void readRunConfig(runInfo& rInfo, char* runConfig);
@@ -82,7 +88,7 @@ void initStruck(TTree& outTree,
 		vector< unique_ptr<pulseFitter> >& sFitters);
 
 //crunch through struck devices for a given event
-void crunchStruck(struck& s, 
+void crunchStruck(vector<sis_fast>& sFast, 
 		  const vector<deviceInfo>& devices,
 		  vector<struckResults>& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters); 
@@ -94,7 +100,7 @@ void initStruckS(TTree& outTree,
 		 vector< unique_ptr<pulseFitter> >& slFitters); 
 
 //crunch slow struck, includes beam and laser flags
-void crunchStruckS(struck& s,
+void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
 		   vector< unique_ptr<pulseFitter> >& slFitters); 
@@ -187,26 +193,26 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 
 	deviceInfo thisDevice;
 	thisDevice.name = subtree.first;
-	thisDevice.module = subtree.second.get<string>("module");
+	thisDevice.moduleType = subtree.second.get<string>("module");
 	thisDevice.channel = subtree.second.get<int>("channel");  
 	thisDevice.channel = 0; //temp for fake datafile
-	if (thisDevice.module == string("struck")){
+	if (thisDevice.moduleType == string("struck")){
 	  rInfo.struckInfo.push_back(thisDevice);
 	}
-	else if (thisDevice.module == string("struckS")){
+	else if (thisDevice.moduleType == string("struckS")){
 	  rInfo.struckSInfo.push_back(thisDevice);
 	}
-	else if (thisDevice.module == string("adc")){
+	else if (thisDevice.moduleType == string("adc")){
 	  rInfo.adcInfo.push_back(thisDevice);
 	}
 	else{
-	  cerr << "Module type " << thisDevice.module
+	  cerr << "Module type " << thisDevice.moduleType
 	       << " not recognize." << endl;
 	  exit(EXIT_FAILURE);
 	}
 	 
 	cout << thisDevice.name << ": " <<
-	  thisDevice.module << " channel " <<
+	  thisDevice.moduleType << " channel " <<
 	  thisDevice.channel << endl;
       }//end loop over devices
     }//end else if
@@ -222,9 +228,12 @@ void crunch(const runInfo& rInfo,
  	    TTree* inTree, 
 	    TTree& outTree){
  
-  struck s;
-  inTree->SetBranchAddress("sis", &s);
+  vector<sis_fast> sFast(2);
+  inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
+  inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
   
+  sis_slow s;
+
   //initialization routines
   vector<struckResults> sr(rInfo.struckInfo.size());
   vector< unique_ptr<pulseFitter> > sFitters;
@@ -243,7 +252,7 @@ void crunch(const runInfo& rInfo,
   for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
     inTree->GetEntry(i);
     crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
-    crunchStruck(s, rInfo.struckInfo, sr, sFitters);
+    crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
     crunchAdc(&temp, rInfo.adcInfo, ar); 
     outTree.Fill();
   }
@@ -290,7 +299,7 @@ void initStruck(TTree& outTree,
   }
 }
 
-void crunchStruck(struck& s, 
+void crunchStruck(vector<sis_fast>& sFast, 
 		  const vector<deviceInfo>& devices,
 		  vector<struckResults>& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters){
@@ -303,13 +312,15 @@ void crunchStruck(struck& s,
     //fill trace
     for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
       sr[j].trace[k] = 
-	s.trace[devices[j].channel][sFitters[2*j+laserRun]->getFitStart()+k];
+	sFast[devices[j].moduleNum].trace[devices[j].channel]
+	[sFitters[2*j+laserRun]->getFitStart()+k];
     }
      
     //get summary information srom the trace
-    sr[j].aSum = sFitters[2*j+laserRun]->getSum(s.trace[devices[j].channel],
-				    sFitters[2*j+laserRun]->getFitStart(),
-				    sFitters[2*j+laserRun]->getFitLength());
+    sr[j].aSum = sFitters[2*j+laserRun]->
+      getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
+	     sFitters[2*j+laserRun]->getFitStart(),
+	     sFitters[2*j+laserRun]->getFitLength());
 
     sr[j].aAmpl = sFitters[2*j+laserRun]->
       getMax(sFitters[2*j+laserRun]->getFitStart(), 
@@ -317,7 +328,7 @@ void crunchStruck(struck& s,
       
     //do the fits
     if(sFitters[2*j+laserRun]->isFitConfigured()){
-      sFitters[2*j+laserRun]->fitSingle(s.trace[devices[j].channel]);
+      sFitters[2*j+laserRun]->fitSingle(sFast[devices[j].moduleNum].trace[devices[j].channel]);
     
       sr[j].energy = sFitters[2*j+laserRun]->getScale();
       sr[j].chi2 = sFitters[2*j+laserRun]->getChi2();
@@ -345,7 +356,7 @@ void initStruckS(TTree& outTree,
 }
 
 //completely temporary implementation
-void crunchStruckS(struck& s,
+void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
 		   vector< unique_ptr<pulseFitter> >& slFitters){
