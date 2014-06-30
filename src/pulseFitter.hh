@@ -76,9 +76,13 @@ public:
   //fill fitTrace with chopped fit trace
   void fillFitTrace(double* fitTrace, int start, int length);
 
-  //setters to update fit length and start dynamically
+  //setters to update fit configuration dynamically
   void setFitStart(int start) {func.setFitStart(start);}
   void setFitLength(int length) {func.setFitLength(length);}
+  void setParameterGuess(int parIndex, double guess) {initialParGuesses[parIndex] = guess;}
+  void setParameterMin(int parIndex, double min) {parMins[parIndex] = min;}
+  void setParameterMax(int parIndex, double max) {parMaxes[parIndex] = max;}
+  
 
 private:
 
