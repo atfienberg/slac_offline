@@ -134,14 +134,27 @@ int main(int argc, char* argv[]) {
   }
 
   //read in the run config file
+  if( !exists(argv[2]) ){
+    cout << argv[2] << " is an invalid file." << endl;
+    exit(EXIT_FAILURE);
+  }
   runInfo rInfo;
   readRunConfig(rInfo, argv[2]);  
      
   //read inputfile
+  if( !exists(argv[1]) ){
+    cout << argv[1] << " is an invalid file." << endl;
+    exit(EXIT_FAILURE);
+  }
   TFile datafile(argv[1]);
   TTree* inTree = (TTree*) datafile.Get("t");
  
   //set up output file and output tree
+  if( !exists(argv[3]) ){
+    cout << argv[3] << " is an invalid file." << endl;
+    exit(EXIT_FAILURE);
+  }
+  
   TFile outf(argv[3], "recreate");
   TTree outTree("t","t");
   
