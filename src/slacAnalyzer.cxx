@@ -325,9 +325,7 @@ void crunchStruck(vector<sis_fast>& sFast,
 			 sFast[devices[j].moduleNum].trace[devices[j].channel]+
 			 TRACELENGTH) - 
       sFast[devices[j].moduleNum].trace[devices[j].channel];
-
-    cout << "mindex: " << mindex << endl;
-										       
+						       			       
     sr[j].aSum = sFitters[2*j+laserRun]->
       getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
 	     sFitters[2*j+laserRun]->getFitStart(),
