@@ -195,8 +195,8 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	thisDevice.name = subtree.first;
 	thisDevice.moduleType = subtree.second.get<string>("module");
 	thisDevice.channel = subtree.second.get<int>("channel");  
-	thisDevice.channel = 0; //temp for fake datafile
 	if (thisDevice.moduleType == string("struck")){
+	  thisDevice.moduleNum = subtree.second.get<int>("module_num");
 	  rInfo.struckInfo.push_back(thisDevice);
 	}
 	else if (thisDevice.moduleType == string("struckS")){
@@ -212,7 +212,8 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	}
 	 
 	cout << thisDevice.name << ": " <<
-	  thisDevice.moduleType << " channel " <<
+	  thisDevice.moduleType << thisDevice.moduleNum <<
+	  " channel " <<
 	  thisDevice.channel << endl;
       }//end loop over devices
     }//end else if
@@ -231,27 +232,28 @@ void crunch(const runInfo& rInfo,
   vector<sis_fast> sFast(2);
   inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
   inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
-  
-  sis_slow s;
+
+  //sis_slow s;
 
   //initialization routines
   vector<struckResults> sr(rInfo.struckInfo.size());
   vector< unique_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
   
-  vector<struckSResults> srSlow(rInfo.struckSInfo.size());
+  /* vector<struckSResults> srSlow(rInfo.struckSInfo.size());
   vector< unique_ptr<pulseFitter> > slFitters;
-  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
-  
+  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);*/
+
   vector<adcResults> ar;
   unsigned short temp;
   initAdc(outTree, rInfo.adcInfo, ar);
   
-  
   //loop over each event 
+  cout << "module num: " << rInfo.struckInfo[0].moduleNum << endl;
   for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
     inTree->GetEntry(i);
-    crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
+    //crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
+    //cout << "crunched slow struck" << endl;
     crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
     crunchAdc(&temp, rInfo.adcInfo, ar); 
     outTree.Fill();
@@ -306,7 +308,6 @@ void crunchStruck(vector<sis_fast>& sFast,
   
   //temp
   int laserRun = 0;
-
   //loop over each device 
   for(unsigned int j = 0; j < devices.size(); ++j){
     //fill trace
@@ -316,7 +317,7 @@ void crunchStruck(vector<sis_fast>& sFast,
 	[sFitters[2*j+laserRun]->getFitStart()+k];
     }
      
-    //get summary information srom the trace
+    //get summary information from the trace
     sr[j].aSum = sFitters[2*j+laserRun]->
       getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
 	     sFitters[2*j+laserRun]->getFitStart(),
@@ -360,7 +361,6 @@ void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
 		   vector< unique_ptr<pulseFitter> >& slFitters){
- 
   srSlow[0].q = static_cast<bool>(clock()%2);
   srSlow[1].q = !srSlow[0].q;
 }

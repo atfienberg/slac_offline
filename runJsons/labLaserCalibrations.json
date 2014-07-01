@@ -1,0 +1,13 @@
+{
+    "devices": {
+        "newSipm": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+        }
+    },
+    "run_info": {
+        "number": "1"
+    }
+}

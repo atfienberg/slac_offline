@@ -22,17 +22,17 @@ using namespace std;
 
 const int TEMPLATELENGTH = 300;
 const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 10;
-const int DEFAULTSTRUCKCHANNEL = 6;
+const int NTIMEBINS = 1;
+const int DEFAULTSTRUCKCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
 const int BUFFERZONE = 40;
 
-struct s_sis{
-  unsigned long long timestamp[8];
-  unsigned short trace[8][0x400];
-  bool is_bad_event;
-};
+typedef struct {
+  unsigned long system_clock;
+  unsigned long device_clock[4];
+  unsigned short trace[4][1024];
+} sis_fast;
 
 typedef struct traceSummary{
   double pseudoTime;
@@ -65,8 +65,8 @@ int main(int argc, char* argv[]) {
   gSystem->Load("libTree");
   TFile infile(argv[1]);
   TTree* t = (TTree*) infile.Get("t");
-  struct s_sis s;
-  t->SetBranchAddress("sis", &s);
+  sis_fast s;
+  t->SetBranchAddress("sis_fast_0", &s);
   
   //process traces
   cout << "Processing traces... " << endl;
