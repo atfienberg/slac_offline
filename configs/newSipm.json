@@ -1,8 +1,8 @@
 {
   "digitizer_specs": {
-    "sample_rate"        :5.0,
+    "sample_rate"        :0.5,
     "trace_length"       :1024,
-    "clip_cut_high"      :60000,
+    "clip_cut_high"      :4000,
     "clip_cut_low"       :15
     },
   
