@@ -20,7 +20,7 @@
     "parameter_mins"    : [365, 0.1],
     "parameter_maxes"   : [372, 20],
     "fit_start"         :355,
-    "fit_length"        :40,
+    "fit_length"        :20,
     "base_fit_length"   :40,
     "base_fit_buffer"   :40,
     "separate_baseline_fit"   : false,

@@ -8,6 +8,7 @@
 #include <time.h>
 #include <vector>
 #include <memory>
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 
@@ -24,6 +25,8 @@
 
 //project includes
 #include "pulseFitter.hh"
+
+#define TRACELENGTH 1024
 
 using namespace std;
 
@@ -318,15 +321,31 @@ void crunchStruck(vector<sis_fast>& sFast,
     }
      
     //get summary information from the trace
+    int mindex = min_element(sFast[devices[j].moduleNum].trace[devices[j].channel],
+			 sFast[devices[j].moduleNum].trace[devices[j].channel]+
+			 TRACELENGTH) - 
+      sFast[devices[j].moduleNum].trace[devices[j].channel];
+
+    cout << "mindex: " << mindex << endl;
+										       
     sr[j].aSum = sFitters[2*j+laserRun]->
       getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
 	     sFitters[2*j+laserRun]->getFitStart(),
 	     sFitters[2*j+laserRun]->getFitLength());
+    
+    sr[j].aAmpl = sFast[devices[j].moduleNum].trace[devices[j].channel][mindex]-
+      sFitters[2*j+laserRun]->getBaseline();
 
-    sr[j].aAmpl = sFitters[2*j+laserRun]->
-      getMax(sFitters[2*j+laserRun]->getFitStart(), 
-	     sFitters[2*j+laserRun]->getFitLength());
+    // sr[j].aAmpl = sFitters[2*j+laserRun]->
+    //   getMax(sFitters[2*j+laserRun]->getFitStart(), 
+    // 	     sFitters[2*j+laserRun]->getFitLength());
       
+    //set fit config based on mindex
+    sFitters[2*j+laserRun]->setFitStart(mindex-8);
+    sFitters[2*j+laserRun]->setParameterGuess(0,mindex);
+    sFitters[2*j+laserRun]->setParameterMin(0,mindex-1);
+    sFitters[2*j+laserRun]->setParameterMax(0,mindex+1);
+
     //do the fits
     if(sFitters[2*j+laserRun]->isFitConfigured()){
       sFitters[2*j+laserRun]->fitSingle(sFast[devices[j].moduleNum].trace[devices[j].channel]);

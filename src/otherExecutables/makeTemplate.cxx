@@ -22,7 +22,7 @@ using namespace std;
 
 const int TEMPLATELENGTH = 300;
 const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 1;
+const int NTIMEBINS = 5;
 const int DEFAULTSTRUCKCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;

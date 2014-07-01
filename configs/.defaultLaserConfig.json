@@ -1,0 +1,26 @@
+{
+  "digitizer_specs": {
+    "sample_rate"        :0.8,
+    "trace_length"       :1024,
+    "clip_cut_high"      :4080,
+    "clip_cut_low"       :0
+    },
+  
+  "fit_specs": {
+    "fit_type"          : "laser",
+    "fit"               : false,
+    "n_parameters"      :5,
+    "parameter_names"   : ["Time", "Delta T", "laser width", "device decay", "device ramp"],	
+    "free_parameter"    : [true, false, false, false, false, false],
+    "parameter_guesses" : [400.0, 5 , 1.6, 3.2, 0.16, 2.56],
+    "parameter_steps"   : [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    "parameter_mins"    : [398, 0,1, 2, 0.1, 1],
+    "parameter_maxes"   : [402, 20, 3, 5, 0.25, 4],
+    "fit_start"         :390,
+    "fit_length"        :30,
+    "base_fit_length"   :30,
+    "base_fit_buffer"   :10,
+    "separate_baseline_fit" : false,
+    "draw"              :true
+    }
+}
