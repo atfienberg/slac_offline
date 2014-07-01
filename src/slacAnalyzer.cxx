@@ -149,12 +149,7 @@ int main(int argc, char* argv[]) {
   TFile datafile(argv[1]);
   TTree* inTree = (TTree*) datafile.Get("t");
  
-  //set up output file and output tree
-  if( !exists(argv[3]) ){
-    cout << argv[3] << " is an invalid file." << endl;
-    exit(EXIT_FAILURE);
-  }
-  
+  //set up output file and output tree  
   TFile outf(argv[3], "recreate");
   TTree outTree("t","t");
   
