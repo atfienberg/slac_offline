@@ -329,7 +329,7 @@ void crunchStruck(vector<sis_fast>& sFast,
     }
      
     //get summary information from the trace
-    int mindex = min_element(sFast[devices[j].moduleNum].trace[devices[j].channel],
+    int maxdex = max_element(sFast[devices[j].moduleNum].trace[devices[j].channel],
 			 sFast[devices[j].moduleNum].trace[devices[j].channel]+
 			 TRACELENGTH) - 
       sFast[devices[j].moduleNum].trace[devices[j].channel];
@@ -339,18 +339,18 @@ void crunchStruck(vector<sis_fast>& sFast,
 	     sFitters[2*j+laserRun]->getFitStart(),
 	     sFitters[2*j+laserRun]->getFitLength());
     
-    sr[j].aAmpl = sFast[devices[j].moduleNum].trace[devices[j].channel][mindex]-
+    sr[j].aAmpl = sFast[devices[j].moduleNum].trace[devices[j].channel][maxdex]-
       sFitters[2*j+laserRun]->getBaseline();
 
     // sr[j].aAmpl = sFitters[2*j+laserRun]->
     //   getMax(sFitters[2*j+laserRun]->getFitStart(), 
     // 	     sFitters[2*j+laserRun]->getFitLength());
       
-    //set fit config based on mindex
-    sFitters[2*j+laserRun]->setFitStart(mindex-8);
-    sFitters[2*j+laserRun]->setParameterGuess(0,mindex);
-    sFitters[2*j+laserRun]->setParameterMin(0,mindex-1);
-    sFitters[2*j+laserRun]->setParameterMax(0,mindex+1);
+    //set fit config based on maxdex
+    sFitters[2*j+laserRun]->setFitStart(maxdex-8);
+    sFitters[2*j+laserRun]->setParameterGuess(0,maxdex);
+    sFitters[2*j+laserRun]->setParameterMin(0,maxdex-1);
+    sFitters[2*j+laserRun]->setParameterMax(0,maxdex+1);
 
     //do the fits
     if(sFitters[2*j+laserRun]->isFitConfigured()){

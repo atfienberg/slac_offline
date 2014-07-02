@@ -195,44 +195,44 @@ traceSummary processTrace(unsigned short* trace){
   traceSummary results;
   results.bad = false;
 
-  //find minimum
-  int mindex = 0;
+  //find maximum
+  int maxdex = 0;
   for(int i = 0; i < TRACELENGTH; ++i){
-    mindex = trace[i] < trace[mindex] ? i : mindex;
+    maxdex = trace[i] > trace[maxdex] ? i : maxdex;
   }
-  results.peakIndex = mindex;
+  results.peakIndex = maxdex;
   
   //calculate pseudotime
-  if(trace[mindex]==trace[mindex+1]) results.pseudoTime = 1;
+  if(trace[maxdex]==trace[maxdex+1]) results.pseudoTime = 1;
   else{
-    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[mindex-1]-trace[mindex])/
-				     (trace[mindex+1]-trace[mindex]));
+    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[maxdex-1]-trace[maxdex])/
+				     (trace[maxdex+1]-trace[maxdex]));
   }
   
   //get the baseline 
-  if(mindex-BASELINEFITLENGTH-BUFFERZONE<0){
+  if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){
     cout << "Baseline fit walked off the end of the trace!" << endl;
     results.bad = true;
     return results;
   }
   double runningBaseline = 0;
   for(int i = 0; i<BASELINEFITLENGTH; ++i){
-    runningBaseline=runningBaseline+trace[mindex-BUFFERZONE-BASELINEFITLENGTH+i];
+    runningBaseline=runningBaseline+trace[maxdex-BUFFERZONE-BASELINEFITLENGTH+i];
   }
   results.baseline = runningBaseline/BASELINEFITLENGTH;
 
   //get the normalization
-  if(mindex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
+  if(maxdex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
     results.bad = true;
     return results;
   }
   double runningIntegral = 0;
   for(int i = 0; i<TEMPLATELENGTH; ++i){
-    runningIntegral = runningIntegral+trace[mindex-BUFFERZONE+i]-results.baseline;
+    runningIntegral = runningIntegral+trace[maxdex-BUFFERZONE+i]-results.baseline;
   }
   results.integral = runningIntegral;
   
-  results.normalizedAmpl = (trace[mindex]-results.baseline)/results.integral;
+  results.normalizedAmpl = (trace[maxdex]-results.baseline)/results.integral;
   return results;
 }
   
