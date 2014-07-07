@@ -20,13 +20,13 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 50;
+const int TEMPLATELENGTH = 20;
 const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 5;
 const int DEFAULTSTRUCKCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
-const int BUFFERZONE = 20;
+const int BUFFERZONE = 5;
 
 typedef struct {
   unsigned long system_clock;
@@ -51,25 +51,22 @@ int main(int argc, char* argv[]) {
   clock_t t1,t2;
   t1 = clock();
   
-  if(argc<5){
-    cout << "usage: ./makeTemplate [inputfile] [outputfile] [struckmodule] [struckChannel]" << endl;
+  if(argc<3){
+    cout << "usage: ./makeTemplate [inputfile] [outputfile] [struckChannel]" << endl;
     return -1;
   }
   
   int struckChannel = DEFAULTSTRUCKCHANNEL;
-  struckChannel = atoi(argv[4]);
+  if(argc == 4){
+    struckChannel = atoi(argv[3]);
+  }
   
   //read input file
   gSystem->Load("libTree");
   TFile infile(argv[1]);
   TTree* t = (TTree*) infile.Get("t");
   sis_fast s;
-  if(argv[3][0] == '0'){
-    t->SetBranchAddress("sis_fast_0", &s);
-  }
-  else{
-    t->SetBranchAddress("sis_fast_1", &s);
-  }
+  t->SetBranchAddress("sis_fast_1", &s);
   
   //process traces
   cout << "Processing traces... " << endl;
@@ -198,45 +195,44 @@ traceSummary processTrace(unsigned short* trace){
   traceSummary results;
   results.bad = false;
 
-  //find maximum
-  int maxdex = 0;
+  //find minimum
+  int mindex = 0;
   for(int i = 0; i < TRACELENGTH; ++i){
-    maxdex = trace[i] > trace[maxdex] ? i : maxdex;
+    mindex = trace[i] < trace[mindex] ? i : mindex;
   }
-  results.peakIndex = maxdex;
-
+  results.peakIndex = mindex;
+  
   //calculate pseudotime
-  if(trace[maxdex]==trace[maxdex+1]) results.pseudoTime = 1;
+  if(trace[mindex]==trace[mindex+1]) results.pseudoTime = 1;
   else{
-    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[maxdex-1]-trace[maxdex])/
-				     (trace[maxdex+1]-trace[maxdex]));
+    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[mindex-1]-trace[mindex])/
+				     (trace[mindex+1]-trace[mindex]));
   }
   
   //get the baseline 
-  if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){
+  if(mindex-BASELINEFITLENGTH-BUFFERZONE<0){
     cout << "Baseline fit walked off the end of the trace!" << endl;
     results.bad = true;
     return results;
   }
   double runningBaseline = 0;
   for(int i = 0; i<BASELINEFITLENGTH; ++i){
-    runningBaseline=runningBaseline+trace[maxdex-BUFFERZONE-BASELINEFITLENGTH+i];
+    runningBaseline=runningBaseline+trace[mindex-BUFFERZONE-BASELINEFITLENGTH+i];
   }
   results.baseline = runningBaseline/BASELINEFITLENGTH;
 
   //get the normalization
-  if(maxdex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
+  if(mindex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
     results.bad = true;
     return results;
   }
   double runningIntegral = 0;
   for(int i = 0; i<TEMPLATELENGTH; ++i){
-    runningIntegral = runningIntegral+trace[maxdex-BUFFERZONE+i]-results.baseline;
+    runningIntegral = runningIntegral+trace[mindex-BUFFERZONE+i]-results.baseline;
   }
   results.integral = runningIntegral;
-
-  results.normalizedAmpl = (trace[maxdex]-results.baseline)/results.integral;
-
+  
+  results.normalizedAmpl = (trace[mindex]-results.baseline)/results.integral;
   return results;
 }
   
