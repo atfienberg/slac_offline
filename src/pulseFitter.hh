@@ -52,6 +52,7 @@ public:
   bool isFitConfigured() const { return fitConfigured; }
   int getFitStart() const { return func.getFitStart(); }
   int getFitLength() const { return func.getFitLength(); }
+  std::string getFitType() const { return fitType; }
 
   //to get analogue sum without doing a fit first
   double getSum(double* const trace, int start, int length);
@@ -175,6 +176,7 @@ private:
 
   bool drawFit;
   bool fitConfigured;
+  std::string fitType;
 
   std::vector<double> initialParGuesses;
   std::vector<double> parSteps;

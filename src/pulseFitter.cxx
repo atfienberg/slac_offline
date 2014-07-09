@@ -128,6 +128,8 @@ pulseFitter::pulseFitter(char* config):
   auto fitConfig = conf.get_child("fit_specs");
   drawFit = fitConfig.get<bool>("draw");
 
+  fitType = fitConfig.get<string>("fit_type");
+
   fitConfigured = fitConfig.get<bool>("fit");
   if(!isFitConfigured())
     return;

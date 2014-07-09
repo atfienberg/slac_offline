@@ -350,9 +350,17 @@ void crunchStruck(vector<sis_fast>& sFast,
 			   TRACELENGTH) - 
 	sFast[devices[j].moduleNum].trace[devices[j].channel];
     }
-    sFitters[2*j+laserRun]->setFitStart(maxdex-
-					sFitters[2*j+laserRun]->getFitLength()/2);
+    //template
+    if(sFitters[2*j+laserRun]->getFitType() == string("template")){
+      sFitters[2*j+laserRun]->setFitStart(maxdex-
+					  sFitters[2*j+laserRun]->getFitLength()/2);
+    }
     
+    //parametric
+    else{
+      sFitters[2*j+laserRun]->setFitStart(maxdex-
+					  sFitters[2*j+laserRun]->getFitLength()+2);
+    }
 						       			       
     sr[j].aSum = sFitters[2*j+laserRun]->
       getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
@@ -367,15 +375,29 @@ void crunchStruck(vector<sis_fast>& sFast,
     // 	     sFitters[2*j+laserRun]->getFitLength());
       
     //set fit config based on maxdex
-    sFitters[2*j+laserRun]->setParameterGuess(0,maxdex);
-    sFitters[2*j+laserRun]->setParameterMin(0,maxdex-1);
-    sFitters[2*j+laserRun]->setParameterMax(0,maxdex+1);
-
+    //template
+    if(sFitters[2*j+laserRun]->getFitType() == string("template")){
+      sFitters[2*j+laserRun]->setParameterGuess(0,maxdex);
+      sFitters[2*j+laserRun]->setParameterMin(0,maxdex-1);
+      sFitters[2*j+laserRun]->setParameterMax(0,maxdex+1);
+    }
+      
+    //parametric
+    else {
+      sFitters[2*j+laserRun]->setParameterGuess(0,maxdex-2);
+      sFitters[2*j+laserRun]->setParameterMin(0,maxdex-3);
+      sFitters[2*j+laserRun]->setParameterMax(0,maxdex-1);
+    }
     //do the fits
     if(sFitters[2*j+laserRun]->isFitConfigured()){
       sFitters[2*j+laserRun]->fitSingle(sFast[devices[j].moduleNum].trace[devices[j].channel]);
     
-      sr[j].energy = sFitters[2*j+laserRun]->getScale();
+      if(sFitters[2*j+laserRun]->getFitType() == string("template")){
+	sr[j].energy = sFitters[2*j+laserRun]->getScale();
+      }
+      else if(sFitters[2*j+laserRun]->getFitType() == string("laser")){
+	sr[j].energy = 2.0*sFitters[2*j+laserRun]->getScale();
+      }
       sr[j].chi2 = sFitters[2*j+laserRun]->getChi2();
       sr[j].time = sFitters[2*j+laserRun]->getTime();
       sr[j].valid = sFitters[2*j+laserRun]->wasValidFit();
