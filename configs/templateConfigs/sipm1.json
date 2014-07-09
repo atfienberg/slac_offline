@@ -8,9 +8,9 @@
   
   "fit_specs": {
     "fit_type"          : "template",
-    "template_file"     : "templates/lensSipm1Template.root",
-    "template_buffer"   : 40,
-    "template_length"   :300,
+    "template_file"     : "templates/sipm1Template.root",
+    "template_buffer"   : 20,
+    "template_length"   :50,
     "fit"               : true,
     "n_parameters"      :    2,	 	
     "parameter_names"   : ["time", "Delta T"],
