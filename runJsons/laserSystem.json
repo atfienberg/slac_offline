@@ -1,0 +1,54 @@
+{
+    "devices": {
+        "lensSipm1": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+        },
+	 "lensSipm2": {
+            "detector_type": "sipm",
+            "channel": 3,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"noLensSipm1": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"noLensSipm2": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"pmt": {
+            "detector_type": "pmt",
+            "channel": 1,
+            "module": "struck",
+	    "polarity": "neg",
+	    "module_num": 1
+        },
+	"pin1": {
+            "detector_type": "pin",
+            "channel": 2,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"pin2": {
+            "detector_type": "pin",
+            "channel": 3,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"slowMonitor":{
+	    "module": "struckS",
+	    "channel": 4
+	}
+    },
+    "run_info": {
+        "number": "0"
+    }
+}

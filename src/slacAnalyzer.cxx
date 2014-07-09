@@ -43,24 +43,25 @@ typedef struct {
   double aAmpl;
   double chi2;
   bool valid;
-} struckResults;
+} fitResults;
 
 typedef struct {
   string name;
   string moduleType;
   int moduleNum;
   int channel;
+  bool neg;
 } deviceInfo;
 
 typedef struct{
   vector<deviceInfo> struckInfo;
   vector<deviceInfo> struckSInfo;
   vector<deviceInfo> adcInfo;
+  vector<deviceInfo> drsInfo;
 } runInfo;
 
-//temp placeholders
 typedef struct{
-  bool q;
+  double aAmpl;
 } struckSResults;
 typedef int adcResults;
 
@@ -76,6 +77,12 @@ typedef struct {
   unsigned short trace[8][1024];
 } sis_slow;
 
+typedef struct {
+  unsigned long system_clock;
+  unsigned long device_clock[8];
+  unsigned short trace[16][1024];
+} drs;
+
 //read the run config file, store info in devInfo
 void readRunConfig(runInfo& rInfo, char* runConfig);
 
@@ -87,14 +94,26 @@ void crunch(const runInfo& rInfo,
 //init for struck devices
 void initStruck(TTree& outTree, 
 		const vector<deviceInfo>& devices,
-		vector<struckResults>& sr,
+		vector<fitResults>& sr,
 		vector< unique_ptr<pulseFitter> >& sFitters);
 
 //crunch through struck devices for a given event
 void crunchStruck(vector<sis_fast>& sFast, 
 		  const vector<deviceInfo>& devices,
-		  vector<struckResults>& sr,
+		  vector<fitResults>& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters); 
+
+//init for drs devices
+void initDRS(TTree& outTree, 
+		const vector<deviceInfo>& devices,
+		vector<fitResults>& drsR,
+		vector< unique_ptr<pulseFitter> >& drsFitters);
+
+//crunch through drs devices for a given event
+void crunchDRS(vector<drs>& drs, 
+		  const vector<deviceInfo>& devices,
+		  vector<fitResults>& drsR,
+		  vector< unique_ptr<pulseFitter> >& drsFitters); 
 
 //init slow struck
 void initStruckS(TTree& outTree, 
@@ -206,9 +225,18 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	thisDevice.name = subtree.first;
 	thisDevice.moduleType = subtree.second.get<string>("module");
 	thisDevice.channel = subtree.second.get<int>("channel");  
+	if(subtree.second.get_child_optional("polarity")){
+	  thisDevice.neg = true;
+	}
+	else{
+	  thisDevice.neg = false;
+	}
 	if (thisDevice.moduleType == string("struck")){
 	  thisDevice.moduleNum = subtree.second.get<int>("module_num");
 	  rInfo.struckInfo.push_back(thisDevice);
+	}
+	else if (thisDevice.moduleType == string("drs")){
+	  rInfo.drsInfo.push_back(thisDevice);
 	}
 	else if (thisDevice.moduleType == string("struckS")){
 	  rInfo.struckSInfo.push_back(thisDevice);
@@ -240,135 +268,208 @@ void crunch(const runInfo& rInfo,
  	    TTree* inTree, 
 	    TTree& outTree){
  
+  //initialization routines
+
   vector<sis_fast> sFast(2);
   inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
   inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
-
-  //sis_slow s;
-
-  //initialization routines
-  vector<struckResults> sr(rInfo.struckInfo.size());
+  vector<fitResults> sr(rInfo.struckInfo.size());
   vector< unique_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
   
-  /* vector<struckSResults> srSlow(rInfo.struckSInfo.size());
+  vector<drs> drs(1);
+  //set drs branch address when it arrives
+  vector<fitResults> drsR(rInfo.struckInfo.size());
+  vector< unique_ptr<pulseFitter> > drsFitters;
+  initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
+
+  sis_slow s;
+  inTree->SetBranchAddress("sis_slow_0",&s);
+  vector<struckSResults> srSlow(rInfo.struckSInfo.size());
   vector< unique_ptr<pulseFitter> > slFitters;
-  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);*/
+  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
 
   vector<adcResults> ar;
   unsigned short temp;
   initAdc(outTree, rInfo.adcInfo, ar);
   
   //loop over each event 
-  cout << "module num: " << rInfo.struckInfo[0].moduleNum << endl;
   for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
     inTree->GetEntry(i);
-    //crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
-    //cout << "crunched slow struck" << endl;
+    crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
     crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
+    crunchDRS(drs, rInfo.drsInfo, drsR, drsFitters);
     crunchAdc(&temp, rInfo.adcInfo, ar); 
+    if( i % 100 == 0){
+      cout << i  << " processed" << endl;
+    }
     outTree.Fill();
   }
 }
 
-void initStruck(TTree& outTree, 
-		const vector<deviceInfo>& devices,
-		vector<struckResults>& sr,
-		vector< unique_ptr<pulseFitter> >& sFitters){
-  //initialize output tree branches for struck devices
-  for(unsigned int i = 0; i < devices.size(); ++i){
-    outTree.Branch(devices[i].name.c_str(),&sr[i],
+void initTraceDevice(TTree& outTree, 
+		     const deviceInfo& device,
+		     fitResults* fr,
+		     vector< unique_ptr<pulseFitter> >& fitters){
+  
+  //initialize output tree branch for this device
+  outTree.Branch(device.name.c_str(), fr,
       Form("trace[%i]/D:fitTrace[%i]/D:energy/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O",
 	   CHOPPED_TRACE_LENGTH, CHOPPED_TRACE_LENGTH));    
+ 
+  //intitalize fitter
+  string config = string("configs/") + device.name + string(".json");
+   //beam configs
+  if (exists(config)){
+    fitters.push_back(unique_ptr< pulseFitter >
+		       (new pulseFitter((char*)config.c_str())));
+  } 
+
+  else{
+    cout << config << " not found. "
+	 << "Using default config." << endl;
+    fitters.push_back(unique_ptr< pulseFitter >
+		      (new pulseFitter()));
+  }
+    
+  //laser configs
+  config = string("configs/") + device.name + string("Laser.json");
+  if (exists(config)){
+    fitters.push_back(unique_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
+  }
+    
+  else{
+    cout << config << " not found. "
+	 << "Using default laser config." << endl;
+    fitters.push_back(unique_ptr< pulseFitter >
+		       (new pulseFitter((char*)"configs/.defaultLaserConfig.json")));
+  } 
+}
+
+void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, bool neg){
+  //fill trace
+  for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
+    fr.trace[k] = 
+      trace[fitter.getFitStart()+k];
+  }
+     
+  //get summary information from the trace
+  int maxdex;
+  if(!neg){
+    maxdex = max_element(trace,trace+TRACELENGTH) - trace;
+  }
+  else{
+    maxdex = min_element(trace, trace + TRACELENGTH) - trace;
+  }
+  
+  //template
+  if(fitter.getFitType() == string("template")){
+    fitter.setFitStart(maxdex - fitter.getFitLength()/2);
+  }
+    
+  //parametric
+  else{
+    fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
+  }
+						       			       
+  fr.aSum = fitter.getSum(trace,fitter.getFitStart(),fitter.getFitLength());
+    
+  fr.aAmpl = trace[maxdex] - fitter.getBaseline();
+
+  //set fit config based on maxdex
+  //template
+  if(fitter.getFitType() == string("template")){
+    fitter.setParameterGuess(0,maxdex);
+    fitter.setParameterMin(0,maxdex-1);
+    fitter.setParameterMax(0,maxdex+1);
+  }
+      
+  //parametric
+  else {
+    fitter.setParameterGuess(0,maxdex-2);
+    fitter.setParameterMin(0,maxdex-3);
+    fitter.setParameterMax(0,maxdex-1);
+  }
+  //do the fits
+  if(fitter.isFitConfigured()){
+    fitter.fitSingle(trace);
+    
+    if(fitter.getFitType() == string("template")){
+      fr.energy = fitter.getScale();
+    }
+    else if(fitter.getFitType() == string("laser")){
+      fr.energy = 2.0*fitter.getScale();
+    }
+    fr.chi2 = fitter.getChi2();
+    fr.time = fitter.getTime();
+    fr.valid = fitter.wasValidFit();
+	
+    //fill fitTrace
+    fitter.fillFitTrace(fr.fitTrace,
+			 fitter.getFitStart(),
+			 CHOPPED_TRACE_LENGTH);     
   }
 
-  //intialize struck fitters
-  for(unsigned int i = 0; i < devices.size(); ++i){
-    string config = string("configs/") + devices[i].name + string(".json");
+  if (fr.energy<0){
+    fr.energy=-1.0*fr.energy;
+  }
+  
+  fr.baseline = fitter.getBaseline();   
+}
 
-    //beam configs
-    if (exists(config)){
-      sFitters.push_back(unique_ptr< pulseFitter >
-			(new pulseFitter((char*)config.c_str())));
-    } 
-    else{
-      cout << config << " not found. "
-	   << "Using default config." << endl;
-      sFitters.push_back(unique_ptr< pulseFitter >
-			(new pulseFitter()));
-    }
-    
-    //laser configs
-    config = string("configs/") + devices[i].name + string("Laser.json");
-    if (exists(config)){
-      sFitters.push_back(unique_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
-    }
-    else{
-      cout << config << " not found. "
-	   << "Using default laser config." << endl;
-      sFitters.push_back(unique_ptr< pulseFitter >
-			 (new pulseFitter((char*)"configs/.defaultLaserConfig.json")));
-    } 
+void initStruck(TTree& outTree, 
+		const vector<deviceInfo>& devices,
+		vector<fitResults>& sr,
+		vector< unique_ptr<pulseFitter> >& sFitters){
+  //initialize each device
+  for(unsigned int i = 0; i < devices.size(); ++i){
+    initTraceDevice(outTree, devices[i], &sr[i], sFitters);
   }
 }
 
 void crunchStruck(vector<sis_fast>& sFast, 
 		  const vector<deviceInfo>& devices,
-		  vector<struckResults>& sr,
+		  vector<fitResults>& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters){
   
   //temp
   int laserRun = 0;
+  
   //loop over each device 
   for(unsigned int j = 0; j < devices.size(); ++j){
-    //fill trace
-    for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
-      sr[j].trace[k] = 
-	sFast[devices[j].moduleNum].trace[devices[j].channel]
-	[sFitters[2*j+laserRun]->getFitStart()+k];
-    }
-     
-    //get summary information from the trace
-    int maxdex = max_element(sFast[devices[j].moduleNum].trace[devices[j].channel],
-			 sFast[devices[j].moduleNum].trace[devices[j].channel]+
-			 TRACELENGTH) - 
-      sFast[devices[j].moduleNum].trace[devices[j].channel];
-						       			       
-    sr[j].aSum = sFitters[2*j+laserRun]->
-      getSum(sFast[devices[j].moduleNum].trace[devices[j].channel],
-	     sFitters[2*j+laserRun]->getFitStart(),
-	     sFitters[2*j+laserRun]->getFitLength());
-    
-    sr[j].aAmpl = sFast[devices[j].moduleNum].trace[devices[j].channel][maxdex]-
-      sFitters[2*j+laserRun]->getBaseline();
+    fitDevice(sFast[devices[j].moduleNum].trace[devices[j].channel],
+	      sr[j], 
+	      *sFitters[2*j+laserRun], devices[j].neg);
+  }   
 
-    // sr[j].aAmpl = sFitters[2*j+laserRun]->
-    //   getMax(sFitters[2*j+laserRun]->getFitStart(), 
-    // 	     sFitters[2*j+laserRun]->getFitLength());
-      
-    //set fit config based on maxdex
-    sFitters[2*j+laserRun]->setFitStart(maxdex-8);
-    sFitters[2*j+laserRun]->setParameterGuess(0,maxdex);
-    sFitters[2*j+laserRun]->setParameterMin(0,maxdex-1);
-    sFitters[2*j+laserRun]->setParameterMax(0,maxdex+1);
+}
 
-    //do the fits
-    if(sFitters[2*j+laserRun]->isFitConfigured()){
-      sFitters[2*j+laserRun]->fitSingle(sFast[devices[j].moduleNum].trace[devices[j].channel]);
-    
-      sr[j].energy = sFitters[2*j+laserRun]->getScale();
-      sr[j].chi2 = sFitters[2*j+laserRun]->getChi2();
-      sr[j].time = sFitters[2*j+laserRun]->getTime();
-      sr[j].valid = sFitters[2*j+laserRun]->wasValidFit();
-	
-      //fill fitTrace
-      sFitters[2*j+laserRun]->fillFitTrace(sr[j].fitTrace,
-			       sFitters[2*j+laserRun]->getFitStart(),
-			       CHOPPED_TRACE_LENGTH);
-       
-    }
-    sr[j].baseline = sFitters[2*j+laserRun]->getBaseline();      
+void initDRS(TTree& outTree, 
+		const vector<deviceInfo>& devices,
+		vector<fitResults>& drsR,
+		vector< unique_ptr<pulseFitter> >& drsFitters){
+  
+  //initialize each device
+  for(unsigned int i = 0; i < devices.size(); ++i){
+    initTraceDevice(outTree, devices[i], &drsR[i], drsFitters);
   }
+}
+
+void crunchDRS(vector<drs>& drs, 
+		  const vector<deviceInfo>& devices,
+		  vector<fitResults>& drsR,
+		  vector< unique_ptr<pulseFitter> >& drsFitters){
+  
+  //temp
+  int laserRun = 0;
+  
+  //loop over each device 
+  for(unsigned int j = 0; j < devices.size(); ++j){
+    fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],
+	      drsR[j], 
+	      *drsFitters[2*j+laserRun], devices[j].neg);
+  }   
+
 }
 
 void initStruckS(TTree& outTree, 
@@ -377,7 +478,7 @@ void initStruckS(TTree& outTree,
 		 vector< unique_ptr<pulseFitter> >& slFitters){
   
   for (unsigned int i = 0; i < devices.size(); ++i){
-    outTree.Branch(devices[i].name.c_str(), &srSlow[i], Form("%s/O",devices[i].name.c_str()));
+    outTree.Branch(devices[i].name.c_str(), &srSlow[i], "aAmpl/D");
   }
 }
 
@@ -386,8 +487,11 @@ void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
 		   vector< unique_ptr<pulseFitter> >& slFitters){
-  srSlow[0].q = static_cast<bool>(clock()%2);
-  srSlow[1].q = !srSlow[0].q;
+  if(devices.size()>0){
+    double baseline = accumulate(s.trace[4],s.trace[4]+20,0)/20;
+    double ampl = *max_element(s.trace[4],s.trace[4]+TRACELENGTH)-baseline;
+    srSlow[0].aAmpl = ampl;
+  }
 }
   
 
