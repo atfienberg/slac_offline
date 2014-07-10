@@ -759,8 +759,6 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 
 
 //template fit
-//this is in a temporary state. the -40 is because template
-//is defined 40 bins before the max.
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
   if((t-t0)>-1*templateBuffer&&(t-t0)<(templateLength-templateBuffer)) 
     return templateSpline->Eval(t-t0);
