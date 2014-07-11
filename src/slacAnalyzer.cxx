@@ -362,7 +362,7 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
   else{
     maxdex = min_element(trace, trace + TRACELENGTH) - trace;
   }
-  
+
   //template
   if(fitter.getFitType() == string("template")){
     fitter.setFitStart(maxdex - fitter.getFitLength()/2);
@@ -477,6 +477,17 @@ void initDRS(TTree& outTree,
   }
 }
 
+const int filterLength = 10;
+void filterTrace(unsigned short* trace){
+  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
+    int runningSum = 0;
+    for(int j = 0; j < filterLength; ++j){
+      runningSum+=trace[i+j];
+    }
+    trace[i] = runningSum/filterLength;
+  }
+}  
+
 void crunchDRS(vector<drs>& drs, 
 		  const vector<deviceInfo>& devices,
 		  vector<fitResults>& drsR,
@@ -487,6 +498,7 @@ void crunchDRS(vector<drs>& drs,
 
   //loop over each device 
   for(unsigned int j = 0; j < devices.size(); ++j){
+    filterTrace(drs[devices[j].moduleNum].trace[devices[j].channel]);
     fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],
 	      drsR[j], 
 	      *drsFitters[2*j+laserRun], devices[j]);

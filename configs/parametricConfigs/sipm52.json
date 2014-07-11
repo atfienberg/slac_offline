@@ -1,29 +1,26 @@
 {
   "digitizer_specs": {
-    "sample_rate"        :0.5,
+    "sample_rate"        :1,
     "trace_length"       :1024,
-    "clip_cut_high"      :4000,
+    "clip_cut_high"      :60000,
     "clip_cut_low"       :15
     },
   
   "fit_specs": {
     "fit_type"          : "laser",
-    "template_file"     : "templates/sipm1Template.root",
-    "template_buffer"   : 20,
-    "template_length"   :50,
     "fit"               : true,
     "n_parameters"      :    5,	 	
     "parameter_names"   : ["time", "Delta T","light width", "device decay", "device ramp"],
     "free_parameter"    : [true, false, true, false, false],
-    "parameter_guesses" : [364.0, 0.0, 1, 3, 1, 2.5],
+    "parameter_guesses" : [364.0, 0.0, 2, 6, 2],
     "parameter_steps"   : [0.1, 0.1, 0.1, 0.1, 0.1],
-    "parameter_mins"    : [362, 0.1, 0.5, 1.0, 0.25],
-    "parameter_maxes"   : [366, 20, 5, 10, 5],
+    "parameter_mins"    : [362, 0.1, 1, 1.0, 0.25],
+    "parameter_maxes"   : [366, 20, 10, 10, 5],
     "fit_start"         :359,
-    "fit_length"        :8,
+    "fit_length"        :15,
     "base_fit_length"   :40,
     "base_fit_buffer"   :40,
     "separate_baseline_fit"   : false,
-    "draw"              :false
+    "draw"              :true
     }
 }

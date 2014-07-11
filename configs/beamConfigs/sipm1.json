@@ -1,0 +1,29 @@
+{
+  "digitizer_specs": {
+    "sample_rate"        :0.5,
+    "trace_length"       :1024,
+    "clip_cut_high"      :4000,
+    "clip_cut_low"       :15
+    },
+  
+  "fit_specs": {
+    "fit_type"          : "beam",
+    "template_file"     : "templates/sipm1Template.root",
+    "template_buffer"   : 20,
+    "template_length"   :50,
+    "fit"               : true,
+    "n_parameters"      :    6,	 	
+    "parameter_names"   : ["time", "Delta T", "device ramp", "device decay", "src ramp", "src decay"],
+    "free_parameter"    : [true, false, false, false, false, false],
+    "parameter_guesses" : [364.0, 0.0, 1.5, 3, 1, 0.5],
+    "parameter_steps"   : [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    "parameter_mins"    : [362, 0.1, 0.5, 1.0, 0.25, 0.2],
+    "parameter_maxes"   : [366, 20, 5, 10, 5, 1],
+    "fit_start"         :359,
+    "fit_length"        :8,
+    "base_fit_length"   :40,
+    "base_fit_buffer"   :40,
+    "separate_baseline_fit"   : false,
+    "draw"              :true
+    }
+}

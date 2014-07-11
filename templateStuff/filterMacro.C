@@ -1,4 +1,10 @@
-void filterTrace(unsigned short* trace){
+using namespace std;
+
+const int TRACELENGTH = 1024;
+
+/*
+//not great
+void filterTrace(int* trace){
   for(int i = 0; i < 1024/2; ++ i){
     trace[2*i] = (trace[2*i]+trace[2*i+1])*1/2;
   }
@@ -9,46 +15,50 @@ void filterTrace(unsigned short* trace){
       trace[2*i+1] = trace[2*i];
   }
 }  
+*/
+
+
+const int filterLength = 10;
+void filterTrace(int* trace){
+  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
+    cout << trace[i] << endl;
+    int runningSum = 0;
+    for(int j = 0; j < filterLength; ++j){
+      runningSum+=trace[i+j];
+    }
+    trace[i] = runningSum/filterLength;
+    cout << trace[i] << endl;
+  }
+}
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[8];
-  unsigned short trace[16][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[16];
+  UShort_t trace[16][1024];
 } drs;
 
 void filterMacro(){
-  TFile infile("../datafiles/run_00111.root");
-  TTree* t = (TTree*) infile.Get("t");
-  TBranch* branch = t->GetBranch("caen_drs_0");
   drs d;
+  TFile infile("../datafiles/run_00119.root");
+  TTree* intree = (TTree*) infile.Get("t");
+  intree->SetBranchAddress("caen_drs_0", &d.system_clock);
+  intree->GetEntry(5);
   int xPoints[1024];
-  for(int i = 0; i <1024; ++i){
+  int trace[1024];
+  int filteredTrace[1024];
+  for(int i = 0; i < 1024; ++i){
     xPoints[i] = i;
+    trace[i] = d.trace[1][i];
+    filteredTrace[i] = d.trace[1][i];
   }
-  branch->SetAddress(&d);
-  cout << branch -> GetEntries() << " pulses." << endl;
-  cout << "Entry #: " << endl;
-  int entry;
-  cin >> entry;
-  t->GetEntry(entry);
-  int unFiltered[1024];
-  for(int i = 0; i < 1024; ++i){
-    unFiltered[i] = d.trace[0][i];
-  }
-  TGraph* unfiltered = new TGraph(1024, xPoints, unFiltered);
-  unfiltered->Draw();
+  filterTrace(filteredTrace);
 
-  filterTrace(d.trace[0][i]);
-  int filtered[1024];
-  for(int i = 0; i < 1024; ++i){
-    filtered[i] = ch1[i];
-  }
-  TGraph* filteredGraph = new TGraph(1024, xPoints, filtered);
-  filteredGraph->SetMarkerStyle(20);
-  filteredGraph->SetLineColor(kRed);
-  filteredGraph->Draw("same");
-  
-  
-  
+  TGraph* testg = new TGraph(1024, xPoints, trace);
+  TGraph* testg2 = new TGraph(1024, xPoints, filteredTrace);
+  testg->Draw();
+  testg2->Draw("same");
+  testg2->SetLineColor(kRed);
+  cout << d.trace[1][400] << endl;
+  cout << d.trace[1][700] << endl;
 }
-
+  

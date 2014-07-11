@@ -20,13 +20,13 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 50;
+const int TEMPLATELENGTH = 100;
 const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 1;
 const int DEFAULTDRSCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
-const int BUFFERZONE = 20;
+const int BUFFERZONE = 40;
 
 typedef struct {
   unsigned long system_clock;
@@ -47,7 +47,7 @@ typedef struct traceSummary{
 traceSummary processTrace(unsigned short* trace);
 double* correctTrace(unsigned short* trace, traceSummary summary, double meanIntegral);
 
-const int filterLength = 6;
+const int filterLength = 10;
 void filterTrace(unsigned short* trace){
   for(int i = 0; i < TRACELENGTH-filterLength; ++i){
     int runningSum = 0;
