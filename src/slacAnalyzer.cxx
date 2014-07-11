@@ -79,7 +79,7 @@ typedef struct {
 
 typedef struct {
   unsigned long system_clock;
-  unsigned long device_clock[8];
+  unsigned long device_clock[16];
   unsigned short trace[16][1024];
 } drs;
 
@@ -231,8 +231,8 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	else{
 	  thisDevice.neg = false;
 	}
-	if (thisDevice.moduleType == string("struck")){
-	  thisDevice.moduleNum = subtree.second.get<int>("module_num");
+	thisDevice.moduleNum = subtree.second.get<int>("module_num");
+	if (thisDevice.moduleType == string("struck")) {
 	  rInfo.struckInfo.push_back(thisDevice);
 	}
 	else if (thisDevice.moduleType == string("drs")){
@@ -276,10 +276,11 @@ void crunch(const runInfo& rInfo,
   vector<fitResults> sr(rInfo.struckInfo.size());
   vector< unique_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
-  
-  vector<drs> drs(1);
-  //set drs branch address when it arrives
-  vector<fitResults> drsR(rInfo.struckInfo.size());
+
+  vector<drs> drs(2);
+  inTree->SetBranchAddress("caen_drs_0", &drs[0]);
+  inTree->SetBranchAddress("caen_drs_1", &drs[1]);
+  vector<fitResults> drsR(rInfo.drsInfo.size());
   vector< unique_ptr<pulseFitter> > drsFitters;
   initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
 
@@ -346,16 +347,16 @@ void initTraceDevice(TTree& outTree,
   } 
 }
 
-void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, bool neg){
+void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
   //fill trace
   for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
     fr.trace[k] = 
       trace[fitter.getFitStart()+k];
   }
-     
+
   //get summary information from the trace
   int maxdex;
-  if(!neg){
+  if(!device.neg){
     maxdex = max_element(trace,trace+TRACELENGTH) - trace;
   }
   else{
@@ -369,7 +370,10 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, bool 
     
   //parametric
   else{
-    fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
+    if(device.moduleType == string("drs"))
+      fitter.setFitStart(maxdex - fitter.getFitLength() + 3);  
+    else if(device.moduleType == string("struck"))
+      fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
   }
 						       			       
   fr.aSum = fitter.getSum(trace,fitter.getFitStart(),fitter.getFitLength());
@@ -384,12 +388,26 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, bool 
     fitter.setParameterMax(0,maxdex+1);
   }
       
-  //parametric
-  else {
-    fitter.setParameterGuess(0,maxdex-2);
-    fitter.setParameterMin(0,maxdex-3);
-    fitter.setParameterMax(0,maxdex-1);
+  //parametric lsaer
+  else if (fitter.getFitType() == string("laser")){
+    if (device.moduleType == string("drs")){
+      fitter.setParameterGuess(0,maxdex-4);
+      fitter.setParameterMin(0,maxdex-6);
+      fitter.setParameterMax(0,maxdex-2);
+    }
+    else if (device.moduleType == string("struck")){
+      fitter.setParameterGuess(0,maxdex-2);
+      fitter.setParameterMin(0,maxdex-3);
+      fitter.setParameterMax(0,maxdex-1);
+    }
   }
+  //parametric beam
+  else if (fitter.getFitType() == string("beam")){
+    fitter.setParameterGuess(0,maxdex-3);
+    fitter.setParameterMin(0,maxdex-4);
+    fitter.setParameterMax(0,maxdex-2);
+  }
+
   //do the fits
   if(fitter.isFitConfigured()){
     fitter.fitSingle(trace);
@@ -399,6 +417,11 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, bool 
     }
     else if(fitter.getFitType() == string("laser")){
       fr.energy = 2.0*fitter.getScale();
+    }
+    else if(fitter.getFitType() == string("beam")){
+      fr.energy = fitter.getScale()*fitter.getParameter(5)*fitter.getParameter(5)*
+	(1/(fitter.getParameter(5)+fitter.getParameter(4))*
+	 (fitter.getParameter(3)+fitter.getParameter(5)));
     }
     fr.chi2 = fitter.getChi2();
     fr.time = fitter.getTime();
@@ -439,9 +462,8 @@ void crunchStruck(vector<sis_fast>& sFast,
   for(unsigned int j = 0; j < devices.size(); ++j){
     fitDevice(sFast[devices[j].moduleNum].trace[devices[j].channel],
 	      sr[j], 
-	      *sFitters[2*j+laserRun], devices[j].neg);
+	      *sFitters[2*j+laserRun], devices[j]);
   }   
-
 }
 
 void initDRS(TTree& outTree, 
@@ -462,12 +484,12 @@ void crunchDRS(vector<drs>& drs,
   
   //temp
   int laserRun = 0;
-  
+
   //loop over each device 
   for(unsigned int j = 0; j < devices.size(); ++j){
     fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],
 	      drsR[j], 
-	      *drsFitters[2*j+laserRun], devices[j].neg);
+	      *drsFitters[2*j+laserRun], devices[j]);
   }   
 
 }

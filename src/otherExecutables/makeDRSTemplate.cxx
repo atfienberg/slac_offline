@@ -20,12 +20,19 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 200;
-const int NBINSPSEUDOTIME = 100;
+const int TEMPLATELENGTH = 50;
+const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 1;
+const int DEFAULTDRSCHANNEL = 0;
 const int TRACELENGTH = 1024;
-const int BASELINEFITLENGTH = 20;
-const int BUFFERZONE = 60;
+const int BASELINEFITLENGTH = 50;
+const int BUFFERZONE = 20;
+
+typedef struct {
+  unsigned long system_clock;
+  unsigned long device_clock[16];
+  unsigned short trace[16][1024];
+} drs;
 
 typedef struct traceSummary{
   double pseudoTime;
@@ -39,26 +46,41 @@ typedef struct traceSummary{
 
 traceSummary processTrace(unsigned short* trace);
 double* correctTrace(unsigned short* trace, traceSummary summary, double meanIntegral);
-void filterTrace(unsigned short* trace);
+
+const int filterLength = 6;
+void filterTrace(unsigned short* trace){
+  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
+    int runningSum = 0;
+    for(int j = 0; j < filterLength; ++j){
+      runningSum+=trace[i+j];
+    }
+    trace[i] = runningSum/filterLength;
+  }
+}  
 
 int main(int argc, char* argv[]) {
   clock_t t1,t2;
   t1 = clock();
   
-  if(argc<3){
-    cout << "need to input datafile and output file." << endl;
+  if(argc<5){
+    cout << "usage: ./makeTemplate [inputfile] [outputfile] [drsmodule] [drsChannel]" << endl;
     return -1;
   }
-
+  
+  int drsChannel = DEFAULTDRSCHANNEL;
+  drsChannel = atoi(argv[4]);
+  
   //read input file
   gSystem->Load("libTree");
   TFile infile(argv[1]);
-  TTree* t = (TTree*) infile.Get("WFDTree");
-  TBranch* branch = t->GetBranch("Channel1");
-  unsigned short ch1[1024];
-  branch->SetAddress(&ch1);
-  cout << branch -> GetEntries() << " pulses." << endl;
-  
+  TTree* t = (TTree*) infile.Get("t");
+  drs s;
+  if(argv[3][0] == '0'){
+    t->SetBranchAddress("caen_drs_0", &s);
+  }
+  else{
+    t->SetBranchAddress("caen_drs_1", &s);
+  }
   
   //process traces
   cout << "Processing traces... " << endl;
@@ -68,8 +90,8 @@ int main(int argc, char* argv[]) {
   TH1D integralHist("integrals","integrals",100,0.0,0.0);
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
-    filterTrace(ch1);
-    summaries[i] = processTrace(ch1);
+    filterTrace(s.trace[drsChannel]);
+    summaries[i] = processTrace(s.trace[drsChannel]);
     pseudoTimesHist.Fill(summaries[i].pseudoTime);
     normalizedMaxes.Fill(summaries[i].normalizedAmpl);
     integralHist.Fill(summaries[i].integral);
@@ -109,14 +131,14 @@ int main(int argc, char* argv[]) {
   cout << "Populating timeslices... " << endl;
   for(int i = 0; i < t->GetEntries(); ++i){
     t->GetEntry(i);
-    filterTrace(ch1);
+    filterTrace(s.trace[drsChannel]);
     if(summaries[i].bad){
       continue;
     }
     double realTime = rtSpline.Eval(summaries[i].pseudoTime);
     int thisSlice = static_cast<int>(realTime*NTIMEBINS);
     if(thisSlice == NTIMEBINS) --thisSlice;
-    double* ctrace = correctTrace(ch1, summaries[i], meanIntegral);
+    double* ctrace = correctTrace(s.trace[drsChannel], summaries[i], meanIntegral);
     for(int j = 0; j<TEMPLATELENGTH; ++j){
       masterFuzzyTemplate.Fill(j-realTime+0.5-BUFFERZONE, ctrace[j]);
     }
@@ -165,7 +187,7 @@ int main(int argc, char* argv[]) {
   errorSpline.SetNpx(10000);
 
   //save data
-  TFile outf(Form("%s.root",argv[2]),"recreate");
+  TFile outf(argv[2],"recreate");
   rtSpline.Write();
   pseudoTimesHist.Write();
   masterFuzzyTemplate.Write();
@@ -174,8 +196,6 @@ int main(int argc, char* argv[]) {
   masterSpline.Write();
   errorSpline.Write();
   errorVsMean.Write();
-  integralHist.Write();
-  normalizedMaxes.Write();
   outf.Write();
   outf.Close();
 
@@ -191,44 +211,45 @@ traceSummary processTrace(unsigned short* trace){
   traceSummary results;
   results.bad = false;
 
-  //find minimum
-  int mindex = 0;
+  //find maximum
+  int maxdex = 0;
   for(int i = 0; i < TRACELENGTH; ++i){
-    mindex = trace[i] < trace[mindex] ? i : mindex;
+    maxdex = trace[i] > trace[maxdex] ? i : maxdex;
   }
-  results.peakIndex = mindex;
+  results.peakIndex = maxdex;
 
   //calculate pseudotime
-  if(trace[mindex]==trace[mindex+1]) results.pseudoTime = 1;
+  if(trace[maxdex]==trace[maxdex+1]) results.pseudoTime = 1;
   else{
-    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[mindex-1]-trace[mindex])/
-				     (trace[mindex+1]-trace[mindex]));
+    results.pseudoTime = 2.0/M_PI*atan(static_cast<float>(trace[maxdex-1]-trace[maxdex])/
+				     (trace[maxdex+1]-trace[maxdex]));
   }
   
   //get the baseline 
-  if(mindex-BASELINEFITLENGTH-BUFFERZONE<0){
+  if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){
     cout << "Baseline fit walked off the end of the trace!" << endl;
     results.bad = true;
     return results;
   }
   double runningBaseline = 0;
   for(int i = 0; i<BASELINEFITLENGTH; ++i){
-    runningBaseline=runningBaseline+trace[mindex-BUFFERZONE-BASELINEFITLENGTH+i];
+    runningBaseline=runningBaseline+trace[maxdex-BUFFERZONE-BASELINEFITLENGTH+i];
   }
   results.baseline = runningBaseline/BASELINEFITLENGTH;
 
   //get the normalization
-  if(mindex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
+  if(maxdex-BUFFERZONE+TEMPLATELENGTH>TRACELENGTH){
     results.bad = true;
     return results;
   }
   double runningIntegral = 0;
   for(int i = 0; i<TEMPLATELENGTH; ++i){
-    runningIntegral = runningIntegral+trace[mindex-BUFFERZONE+i]-results.baseline;
+    runningIntegral = runningIntegral+trace[maxdex-BUFFERZONE+i]-results.baseline;
   }
   results.integral = runningIntegral;
-  
-  results.normalizedAmpl = (trace[mindex]-results.baseline)/results.integral;
+
+  results.normalizedAmpl = (trace[maxdex]-results.baseline)/results.integral;
+
   return results;
 }
   
@@ -243,16 +264,3 @@ double* correctTrace(unsigned short* trace, traceSummary summary, double meanInt
   }
   return correctedTrace;
 }
-
-//try to filter out weird drs noise
-void filterTrace(unsigned short* trace){
-  for(int i = 0; i < 1024/2; ++ i){
-    trace[2*i] = (trace[2*i]+trace[2*i+1])*1/2;
-  }
-  for(int i = 0; i < 1024/2; ++i){
-    if(i!=1024/2-1)
-      trace[2*i+1] = (trace[2*i]+trace[2*i+2])/2;
-    else
-      trace[2*i+1] = trace[2*i];
-  }
-}  
