@@ -25,7 +25,6 @@
 
 //project includes
 #include "pulseFitter.hh"
-
 #define TRACELENGTH 1024
 
 using namespace std;
@@ -66,21 +65,21 @@ typedef struct{
 typedef int adcResults;
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[4];
-  unsigned short trace[4][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[4];
+  UShort_t trace[4][1024];
 } sis_fast;
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[8];
-  unsigned short trace[8][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[8];
+  UShort_t trace[8][1024];
 } sis_slow;
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[16];
-  unsigned short trace[16][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[16];
+  UShort_t trace[16][1024];
 } drs;
 
 //read the run config file, store info in devInfo
@@ -133,7 +132,7 @@ void initAdc(TTree& outTree,
 	     vector<adcResults>& ar);
 
 //crunch adc
-void crunchAdc(const unsigned short* adc,
+void crunchAdc(const UShort_t* adc,
 	       const vector<deviceInfo>& devices,
 	       vector<adcResults>& ar);
 
@@ -291,7 +290,7 @@ void crunch(const runInfo& rInfo,
   initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
 
   vector<adcResults> ar;
-  unsigned short temp;
+  UShort_t temp;
   initAdc(outTree, rInfo.adcInfo, ar);
   
   //loop over each event 
@@ -347,13 +346,7 @@ void initTraceDevice(TTree& outTree,
   } 
 }
 
-void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
-  //fill trace
-  for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
-    fr.trace[k] = 
-      trace[fitter.getFitStart()+k];
-  }
-
+void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
   //get summary information from the trace
   int maxdex;
   if(!device.neg){
@@ -433,6 +426,12 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
 			 CHOPPED_TRACE_LENGTH);     
   }
 
+  //fill trace
+  for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
+    fr.trace[k] = 
+      trace[fitter.getFitStart()+k];
+  }
+
   if (fr.energy<0){
     fr.energy=-1.0*fr.energy;
   }
@@ -478,7 +477,7 @@ void initDRS(TTree& outTree,
 }
 
 const int filterLength = 10;
-void filterTrace(unsigned short* trace){
+void filterTrace(UShort_t* trace){
   for(int i = 0; i < TRACELENGTH-filterLength; ++i){
     int runningSum = 0;
     for(int j = 0; j < filterLength; ++j){
@@ -535,7 +534,7 @@ void initAdc(TTree& outTree,
   //stub
 }
 
-void crunchAdc(const unsigned short* adc,
+void crunchAdc(const UShort_t* adc,
 	       const vector<deviceInfo>& devices,
 	       vector<adcResults>& ar){
   //stub
