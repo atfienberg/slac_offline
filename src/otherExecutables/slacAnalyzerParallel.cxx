@@ -23,6 +23,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+//open mp
+#include <omp.h>
+
 //project includes
 #include "pulseFitter.hh"
 #define TRACELENGTH 1024
@@ -113,9 +116,9 @@ void initStruck(TTree& outTree,
 		vector< unique_ptr<pulseFitter> >& sFitters);
 
 //crunch through struck devices for a given event
-void crunchStruck(vector<sis_fast>& sFast, 
+void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& sr,
+		  vector< vector<fitResults> >& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters); 
 
 //init for drs devices
@@ -125,10 +128,10 @@ void initDRS(TTree& outTree,
 		vector< unique_ptr<pulseFitter> >& drsFitters);
 
 //crunch through drs devices for a given event
-void crunchDRS(vector<drs>& drs, 
-		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& drsR,
-		  vector< unique_ptr<pulseFitter> >& drsFitters); 
+void crunchDRS(vector< vector<drs> >& data, 
+	       const vector<deviceInfo>& devices,
+	       vector< vector<fitResults> >& drsR,
+	       vector< unique_ptr<pulseFitter> >& drsFitters); 
 
 //init slow struck
 void initStruckS(TTree& outTree, 
@@ -149,10 +152,10 @@ void initAdc(TTree& outTree,
 	     wireChamberResults* wr);
 
 //crunch adc
-void crunchAdc(const vector<adc>& adc,
+void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar,
-	       wireChamberResults& wr);
+	       vector< vector<adcResults> >& ar,
+	       vector< wireChamberResults >& wr);
 
 //check if a file exists
 bool exists(const string& name) {
@@ -280,18 +283,6 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
   checkDuplicates(rInfo.struckSInfo);
   checkDuplicates(rInfo.adcInfo);
 }
-
-unsigned int adcSize(const vector<deviceInfo>& adcInfo){
-  unsigned int size = adcInfo.size();
-  for(unsigned int i = 0; i < adcInfo.size(); ++i){
-    
-    if(adcInfo[i].name == "wireChamber"){
-      --size;
-    }
-  }
-  
-  return size;
-}
     
 void crunch(const runInfo& rInfo, 
  	    TTree* inTree, 
@@ -308,9 +299,9 @@ void crunch(const runInfo& rInfo,
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
 
   //drs
-  vector<drs> drs(2);
-  inTree->SetBranchAddress("caen_drs_0", &drs[0]);
-  inTree->SetBranchAddress("caen_drs_1", &drs[1]);
+  vector<drs> drsVec(2);
+  inTree->SetBranchAddress("caen_drs_0", &drsVec[0]);
+  inTree->SetBranchAddress("caen_drs_1", &drsVec[1]);
   vector<fitResults> drsR(rInfo.drsInfo.size());
   vector< unique_ptr<pulseFitter> > drsFitters;
   initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
@@ -326,24 +317,66 @@ void crunch(const runInfo& rInfo,
   vector<adc> adcs(2);
   inTree->SetBranchAddress("caen_adc_0", &adcs[0]);
   inTree->SetBranchAddress("caen_adc_1", &adcs[1]);
-  vector<adcResults> ar(adcSize(rInfo.adcInfo));
+  vector<adcResults> ar(rInfo.adcInfo.size());
   wireChamberResults wr;
   initAdc(outTree, rInfo.adcInfo, ar, &wr);
   
   //end initialization routines
-
+  
+  //load run into memory
+  clock_t t1, t2;
+  t1 = clock();
+  vector< vector<sis_fast> > sis_fast_data(inTree->GetEntries());
+  vector< vector<fitResults> > sis_fast_results(inTree->GetEntries());
+  vector< vector<drs> > drs_data(inTree->GetEntries());
+  vector< vector<fitResults> > drs_results(inTree->GetEntries());
+  vector< vector<adc> > adc_data(inTree->GetEntries());
+  vector< vector<adcResults> > adc_results(inTree->GetEntries());
+  vector< wireChamberResults > wire_results(inTree->GetEntries());
+  
   //loop over each event 
   for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
     inTree->GetEntry(i);
-    crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
-    crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
-    crunchDRS(drs, rInfo.drsInfo, drsR, drsFitters);
-    crunchAdc(adcs, rInfo.adcInfo, ar, wr); 
-    if( i % 100 == 0){
-      cout << i  << " processed" << endl;
+    drs_results[i].resize(rInfo.drsInfo.size());
+    sis_fast_results[i].resize(rInfo.struckInfo.size());
+    adc_results[i].resize(rInfo.adcInfo.size());
+    sis_fast_data[i].resize(2);
+
+    for(unsigned int j = 0; j < sis_fast_data[i].size(); ++j){
+      sis_fast_data[i][j] = sFast[j];
     }
+    
+    drs_data[i].resize(2);
+    for(unsigned int j = 0; j < drs_data[i].size(); ++j){
+      drs_data[i][j] = drsVec[j];
+    }
+    
+    adc_data[i].resize(2);
+    for(unsigned int j = 0; j < adc_data[i].size(); ++j){
+      adc_data[i][j] = adcs[j];
+    }
+  }    
+
+  t2 = clock();
+  float diff ((float)t2-(float)t1);
+  cout << "Time elapsed for load: " << diff/CLOCKS_PER_SEC << "s" << endl;
+  
+  crunchStruck(sis_fast_data, rInfo.struckSInfo, sis_fast_results, sFitters);
+  crunchDRS(drs_data, rInfo.drsInfo, drs_results, drsFitters);
+  crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results);
+  
+  t1 = clock();
+  //dump data
+  for( int i = 0; i < inTree->GetEntries(); ++i){
+    sr = sis_fast_results[i];
+    drsR = drs_results[i];
+    wr = wire_results[i];
+    ar = adc_results[i];
     outTree.Fill();
   }
+  t2 = clock();
+  diff =  ((float)t2-(float)t1);
+  cout << "Time elapsed for dump: " << diff/CLOCKS_PER_SEC << "s" << endl;
 }
 
 void initTraceDevice(TTree& outTree, 
@@ -488,20 +521,24 @@ void initStruck(TTree& outTree,
   }
 }
 
-void crunchStruck(vector<sis_fast>& sFast, 
+void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& sr,
+		  vector< vector<fitResults> >& sr,
 		  vector< unique_ptr<pulseFitter> >& sFitters){
   
   //temp
   int laserRun = 0;
   
   //loop over each device 
+  #pragma omp parallel for
   for(unsigned int j = 0; j < devices.size(); ++j){
-    fitDevice(sFast[devices[j].moduleNum].trace[devices[j].channel],
-	      sr[j], 
-	      *sFitters[2*j+laserRun], devices[j]);
-  }   
+    for( unsigned int i = 0; i < data.size(); ++i){
+      
+      fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
+		sr[i][j], 
+		*sFitters[2*j+laserRun], devices[j]);
+    }   
+  }
 }
 
 void initDRS(TTree& outTree, 
@@ -526,22 +563,24 @@ void filterTrace(UShort_t* trace){
   }
 }  
 
-void crunchDRS(vector<drs>& drs, 
-		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& drsR,
-		  vector< unique_ptr<pulseFitter> >& drsFitters){
+void crunchDRS(vector< vector<drs> >& data, 
+	       const vector<deviceInfo>& devices,
+	       vector< vector<fitResults> >& drsR,
+	       vector< unique_ptr<pulseFitter> >& drsFitters){
   
   //temp
   int laserRun = 0;
 
   //loop over each device 
+  #pragma omp parallel for
   for(unsigned int j = 0; j < devices.size(); ++j){
-    filterTrace(drs[devices[j].moduleNum].trace[devices[j].channel]);
-    fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],
-	      drsR[j], 
-	      *drsFitters[2*j+laserRun], devices[j]);
-  }   
-
+    for(unsigned int i = 0; i < data.size(); ++i){
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel]);
+      fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
+		drsR[i][j], 
+		*drsFitters[2*j+laserRun], devices[j]);
+    }
+  }
 }
 
 void initStruckS(TTree& outTree, 
@@ -597,20 +636,21 @@ void computeWireChamber(const UShort_t* adc1,
   wr.good = true;
 }
 
-void crunchAdc(const vector<adc>& adc,
+void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar,
-	       wireChamberResults& wr){
+	       vector< vector<adcResults> >& ar,
+	       vector< wireChamberResults >& wr){
 
+  #pragma omp parallel for
   for(unsigned int i = 0; i < devices.size(); ++i){
-
-    if (devices[i].name == "wireChamber"){
-      computeWireChamber(adc[0].value, adc[1].value, wr);
-    }
+    for(unsigned int j = 0; j < adc_data.size(); ++j){
+      if (devices[i].name == "wireChamber"){
+	computeWireChamber(adc_data[j][0].value, adc_data[j][1].value, wr[j]);
+      }
    
-    else{
-      ar[i] = adc[devices[i].moduleNum].value[devices[i].channel];
+      else{
+	ar[j][i] = adc_data[j][devices[i].moduleNum].value[devices[i].channel];
+      }
     }
-    
   }
 }
