@@ -45,6 +45,17 @@ typedef struct {
 } fitResults;
 
 typedef struct {
+  float cathode_x;
+  float cathode_y;
+  float anode;
+  bool good;
+} wireChamberResults;
+
+typedef bool flagResults;
+
+typedef UShort_t adcResults;
+
+typedef struct {
   string name;
   string moduleType;
   int moduleNum;
@@ -62,7 +73,6 @@ typedef struct{
 typedef struct{
   double aAmpl;
 } struckSResults;
-typedef int adcResults;
 
 typedef struct {
   ULong64_t system_clock;
@@ -81,6 +91,12 @@ typedef struct {
   ULong64_t device_clock[16];
   UShort_t trace[16][1024];
 } drs;
+
+typedef struct {
+  ULong64_t system_clock;
+  ULong64_t device_clock[8];
+  UShort_t value[8];
+} adc;
 
 //read the run config file, store info in devInfo
 void readRunConfig(runInfo& rInfo, char* runConfig);
@@ -129,12 +145,14 @@ void crunchStruckS(sis_slow& s,
 //init adc
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
-	     vector<adcResults>& ar);
+	     vector<adcResults>& ar,
+	     wireChamberResults* wr);
 
 //crunch adc
-void crunchAdc(const UShort_t* adc,
+void crunchAdc(const vector<adc>& adc,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar);
+	       vector<adcResults>& ar,
+	       wireChamberResults& wr);
 
 //check if a file exists
 bool exists(const string& name) {
@@ -262,13 +280,26 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
   checkDuplicates(rInfo.struckSInfo);
   checkDuplicates(rInfo.adcInfo);
 }
+
+unsigned int adcSize(const vector<deviceInfo>& adcInfo){
+  unsigned int size = adcInfo.size();
+  for(unsigned int i = 0; i < adcInfo.size(); ++i){
+    
+    if(adcInfo[i].name == "wireChamber"){
+      --size;
+    }
+  }
   
+  return size;
+}
+    
 void crunch(const runInfo& rInfo, 
  	    TTree* inTree, 
 	    TTree& outTree){
  
   //initialization routines
 
+  //fast struck
   vector<sis_fast> sFast(2);
   inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
   inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
@@ -276,6 +307,7 @@ void crunch(const runInfo& rInfo,
   vector< unique_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
 
+  //drs
   vector<drs> drs(2);
   inTree->SetBranchAddress("caen_drs_0", &drs[0]);
   inTree->SetBranchAddress("caen_drs_1", &drs[1]);
@@ -283,23 +315,30 @@ void crunch(const runInfo& rInfo,
   vector< unique_ptr<pulseFitter> > drsFitters;
   initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
 
+  //slow struck
   sis_slow s;
   inTree->SetBranchAddress("sis_slow_0",&s);
   vector<struckSResults> srSlow(rInfo.struckSInfo.size());
   vector< unique_ptr<pulseFitter> > slFitters;
   initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
 
-  vector<adcResults> ar;
-  UShort_t temp;
-  initAdc(outTree, rInfo.adcInfo, ar);
+  //adcs
+  vector<adc> adcs(2);
+  inTree->SetBranchAddress("caen_adc_0", &adcs[0]);
+  inTree->SetBranchAddress("caen_adc_1", &adcs[1]);
+  vector<adcResults> ar(adcSize(rInfo.adcInfo));
+  wireChamberResults wr;
+  initAdc(outTree, rInfo.adcInfo, ar, &wr);
   
+  //end initialization routines
+
   //loop over each event 
   for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
     inTree->GetEntry(i);
     crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
     crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
     crunchDRS(drs, rInfo.drsInfo, drsR, drsFitters);
-    crunchAdc(&temp, rInfo.adcInfo, ar); 
+    crunchAdc(adcs, rInfo.adcInfo, ar, wr); 
     if( i % 100 == 0){
       cout << i  << " processed" << endl;
     }
@@ -530,12 +569,48 @@ void crunchStruckS(sis_slow& s,
 
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
-	     vector<adcResults>& ar){
-  //stub
+	     vector<adcResults>& ar,
+	     wireChamberResults* wr){
+  for (unsigned int i = 0; i < devices.size(); ++i){
+    
+    if ( devices[i].name == "wireChamber" ){
+      outTree.Branch(devices[i].name.c_str(), wr, 
+		     "cathode_x/F:cathode_y/F:anode/F:good/O");
+    }
+    
+    else{
+      outTree.Branch(devices[i].name.c_str(), &ar[i], "value/s");
+    }
+    
+  } 
+  
 }
 
-void crunchAdc(const UShort_t* adc,
+void computeWireChamber(const UShort_t* adc1,
+			const UShort_t* adc2,
+			wireChamberResults& wr){
+
+  //temp implementation
+  wr.cathode_x = 5;
+  wr.cathode_y = 5;
+  wr.anode = 5;
+  wr.good = true;
+}
+
+void crunchAdc(const vector<adc>& adc,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar){
-  //stub
+	       vector<adcResults>& ar,
+	       wireChamberResults& wr){
+
+  for(unsigned int i = 0; i < devices.size(); ++i){
+
+    if (devices[i].name == "wireChamber"){
+      computeWireChamber(adc[0].value, adc[1].value, wr);
+    }
+   
+    else{
+      ar[i] = adc[devices[i].moduleNum].value[devices[i].channel];
+    }
+    
+  }
 }
