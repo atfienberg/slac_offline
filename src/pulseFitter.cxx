@@ -300,6 +300,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
    
   //for outputting and drawing (for debugging purposes)
   if(drawFit){
+    min->PrintResults();
     TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL); 
     TFile* outf = new TFile("fitTrace.root","recreate"); 
     if(isSingleFit){

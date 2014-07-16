@@ -280,18 +280,6 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
   checkDuplicates(rInfo.struckSInfo);
   checkDuplicates(rInfo.adcInfo);
 }
-
-unsigned int adcSize(const vector<deviceInfo>& adcInfo){
-  unsigned int size = adcInfo.size();
-  for(unsigned int i = 0; i < adcInfo.size(); ++i){
-    
-    if(adcInfo[i].name == "wireChamber"){
-      --size;
-    }
-  }
-  
-  return size;
-}
     
 void crunch(const runInfo& rInfo, 
  	    TTree* inTree, 
@@ -326,7 +314,7 @@ void crunch(const runInfo& rInfo,
   vector<adc> adcs(2);
   inTree->SetBranchAddress("caen_adc_0", &adcs[0]);
   inTree->SetBranchAddress("caen_adc_1", &adcs[1]);
-  vector<adcResults> ar(adcSize(rInfo.adcInfo));
+  vector<adcResults> ar(rInfo.adcInfo.size());
   wireChamberResults wr;
   initAdc(outTree, rInfo.adcInfo, ar, &wr);
   

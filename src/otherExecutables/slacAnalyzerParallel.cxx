@@ -14,6 +14,7 @@
 
 //ROOT includes
 #include "TApplication.h"
+#include "TROOT.h"
 #include "TH1.h"
 #include "TCanvas.h"
 #include "TFile.h"
@@ -32,6 +33,7 @@
 
 using namespace std;
 
+const int BATCH_SIZE = 1000;
 const int CHOPPED_TRACE_LENGTH = 50;
 
 //define some datastructures
@@ -165,6 +167,7 @@ bool exists(const string& name) {
 
 int main(int argc, char* argv[]) {
   new TApplication("app", 0, nullptr);
+  gROOT->ProcessLine("gErrorIgnoreLevel = kWarning");
   
   if (argc<4){
     cout << "usage: ./slacAnalyzer [inputfile] [configfile] [outputfile]"
@@ -323,60 +326,68 @@ void crunch(const runInfo& rInfo,
   
   //end initialization routines
   
-  //load run into memory
-  clock_t t1, t2;
-  t1 = clock();
-  vector< vector<sis_fast> > sis_fast_data(inTree->GetEntries());
-  vector< vector<fitResults> > sis_fast_results(inTree->GetEntries());
-  vector< vector<drs> > drs_data(inTree->GetEntries());
-  vector< vector<fitResults> > drs_results(inTree->GetEntries());
-  vector< vector<adc> > adc_data(inTree->GetEntries());
-  vector< vector<adcResults> > adc_results(inTree->GetEntries());
-  vector< wireChamberResults > wire_results(inTree->GetEntries());
+  //load-crunch-dump loop, processes data in chunks of BATCH_SIZE
+  unsigned int startEntry = 0;
+  unsigned int endEntry = BATCH_SIZE < inTree->GetEntries() 
+    ? BATCH_SIZE : inTree->GetEntries();
   
-  //loop over each event 
-  for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
-    inTree->GetEntry(i);
-    drs_results[i].resize(rInfo.drsInfo.size());
-    sis_fast_results[i].resize(rInfo.struckInfo.size());
-    adc_results[i].resize(rInfo.adcInfo.size());
-    sis_fast_data[i].resize(2);
+  while(startEntry!= inTree->GetEntries()){
+    unsigned int thisBatchSize = endEntry - startEntry;
 
-    for(unsigned int j = 0; j < sis_fast_data[i].size(); ++j){
-      sis_fast_data[i][j] = sFast[j];
-    }
-    
-    drs_data[i].resize(2);
-    for(unsigned int j = 0; j < drs_data[i].size(); ++j){
-      drs_data[i][j] = drsVec[j];
-    }
-    
-    adc_data[i].resize(2);
-    for(unsigned int j = 0; j < adc_data[i].size(); ++j){
-      adc_data[i][j] = adcs[j];
-    }
-  }    
+    //set up neccesary data structures
+    vector< vector<sis_fast> > sis_fast_data(thisBatchSize);
+    vector< vector<fitResults> > sis_fast_results(thisBatchSize);
+    vector< vector<drs> > drs_data(thisBatchSize);
+    vector< vector<fitResults> > drs_results(thisBatchSize);
+    vector< vector<adc> > adc_data(thisBatchSize);
+    vector< vector<adcResults> > adc_results(thisBatchSize);
+    vector< wireChamberResults > wire_results(thisBatchSize);
 
-  t2 = clock();
-  float diff ((float)t2-(float)t1);
-  cout << "Time elapsed for load: " << diff/CLOCKS_PER_SEC << "s" << endl;
-  
-  crunchStruck(sis_fast_data, rInfo.struckSInfo, sis_fast_results, sFitters);
-  crunchDRS(drs_data, rInfo.drsInfo, drs_results, drsFitters);
-  crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results);
-  
-  t1 = clock();
-  //dump data
-  for( int i = 0; i < inTree->GetEntries(); ++i){
-    sr = sis_fast_results[i];
-    drsR = drs_results[i];
-    wr = wire_results[i];
-    ar = adc_results[i];
-    outTree.Fill();
+    //load data
+    for(unsigned int i = startEntry; i < endEntry; ++i){
+      inTree->GetEntry(i);
+      unsigned int dataIndex = i - startEntry;
+
+      drs_results[dataIndex].resize(rInfo.drsInfo.size());
+      sis_fast_results[dataIndex].resize(rInfo.struckInfo.size());
+      adc_results[dataIndex].resize(rInfo.adcInfo.size());
+      sis_fast_data[dataIndex].resize(2);
+
+      for(unsigned int j = 0; j < sis_fast_data[dataIndex].size(); ++j){
+	sis_fast_data[dataIndex][j] = sFast[j];
+      }
+    
+      drs_data[dataIndex].resize(2);
+      for(unsigned int j = 0; j < drs_data[dataIndex].size(); ++j){
+	drs_data[dataIndex][j] = drsVec[j];
+      }
+    
+      adc_data[dataIndex].resize(2);
+      for(unsigned int j = 0; j < adc_data[dataIndex].size(); ++j){
+	adc_data[dataIndex][j] = adcs[j];
+      }
+    }    
+
+    //crunch data
+    crunchStruck(sis_fast_data, rInfo.struckSInfo, sis_fast_results, sFitters);
+    crunchDRS(drs_data, rInfo.drsInfo, drs_results, drsFitters);
+    crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results);
+
+    //dump data
+    for(unsigned int i = 0; i < thisBatchSize; ++i){
+      sr = sis_fast_results[i];
+      drsR = drs_results[i];
+      wr = wire_results[i];
+      ar = adc_results[i];
+      outTree.Fill();
+    }
+
+    cout << "processed up to event " << endEntry << endl;
+
+    startEntry = endEntry;
+    endEntry = endEntry + BATCH_SIZE < inTree->GetEntries() 
+    ? endEntry + BATCH_SIZE  : inTree->GetEntries();
   }
-  t2 = clock();
-  diff =  ((float)t2-(float)t1);
-  cout << "Time elapsed for dump: " << diff/CLOCKS_PER_SEC << "s" << endl;
 }
 
 void initTraceDevice(TTree& outTree, 
