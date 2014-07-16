@@ -23,6 +23,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+//open mp
+#include <omp.h>
+
 //project includes
 #include "pulseFitter.hh"
 #define TRACELENGTH 1024
@@ -190,13 +193,13 @@ int main(int argc, char* argv[]) {
   TTree outTree("t","t");
   
   //do the fits
-  clock_t t1,t2;
-  t1 = clock();
+  // clock_t t1,t2;
+  //t1 = clock();
   crunch(rInfo, inTree, outTree);
-  t2 = clock();
+  //t2 = clock();
 
-  float diff ((float)t2-(float)t1);
-  cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
+  //float diff ((float)t2-(float)t1);
+  //cout << "Time elapsed: " << diff/CLOCKS_PER_SEC << "s" << endl;
 
   //write the data
   outf.Write();
@@ -535,6 +538,7 @@ void crunchDRS(vector<drs>& drs,
   int laserRun = 0;
 
   //loop over each device 
+  //#pragma omp parallel for
   for(unsigned int j = 0; j < devices.size(); ++j){
     filterTrace(drs[devices[j].moduleNum].trace[devices[j].channel]);
     fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],

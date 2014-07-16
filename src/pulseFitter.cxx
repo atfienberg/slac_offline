@@ -33,6 +33,8 @@ Implementation for pulseFitter classes
 #include "TCanvas.h"
 #include "TSystem.h"
 #include "Math/WrappedMultiTF1.h"
+#include "Math/Minimizer.h"
+#include "Math/Factory.h"
 
 using namespace std;
 
@@ -110,7 +112,8 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 
 //constructor for the pulseFitter class, must be constructed with a config file
 pulseFitter::pulseFitter(char* config):
-  func(config)
+  func(config),
+  functor(&func, &pulseFitter::pulseFitFunction::chi2Function, func.getNParameters())
 {
   //xpoints is just a vector of doubles from 0 to traceLength-1, used to make TGraphs 
   xPoints.resize(func.getTraceLength());
@@ -142,11 +145,12 @@ pulseFitter::pulseFitter(char* config):
 		     func.getNParameters());  
   
   waveform->SetNpx(10000);
-  wwaveform = new ROOT::Math::WrappedMultiTF1(*waveform,1); 
   
-  f.SetFunction(*wwaveform);
-  f.Config().MinimizerOptions().SetPrintLevel(0);
-  //f.Config().MinimizerOptions().SetTolerance(1);
+  min = ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad");
+  min->SetFunction(functor);
+
+  min->SetPrintLevel(-1);
+  
 
   //read arrays from the config file
   auto nameTree = fitConfig.get_child("parameter_names");
@@ -184,7 +188,6 @@ pulseFitter::pulseFitter(char* config):
 pulseFitter::~pulseFitter(){
   if(isFitConfigured()){
     delete waveform;
-    delete wwaveform;
   }
 }
 
@@ -249,55 +252,66 @@ double pulseFitter::fitPulse(double* const trace, double error,
   //loop over each function parameter for initial configuration
   for(int i = 0; i<func.getNParameters(); ++i){
     if((i!=1)&&freeParameter[i]){ 
-      f.Config().ParSettings(i).Set(parNames[i].c_str(),
+      /*f.Config().ParSettings(i).Set(parNames[i].c_str(),
 				    initialParGuesses[i],
 				    parSteps[i],
 				    parMins[i],
-				    parMaxes[i]);
+				    parMaxes[i]);*/
+      min->SetLimitedVariable(i, 
+			       parNames[i].c_str(),
+			       initialParGuesses[i],
+			       parSteps[i],
+			       parMins[i],
+			       parMaxes[i]);
     } //configure each free parameter that is not parameter_1 (delta T)
     
     else if (i == 1){ 
       if(isSingleFit){
-	f.Config().ParSettings(1).Set("Delta T",0);
+	//	f.Config().ParSettings(1).Set("Delta T",0);
+	min->SetFixedVariable(1,"Delta T", 0);
       }//fix delta t to 0 if it's a single fit
 
-      else{
+      /*else{
 	f.Config().ParSettings(i).Release();
 	f.Config().ParSettings(i).Set(parNames[i].c_str(),
 				      initialParGuesses[i],
 				      parSteps[i],
 				      parMins[i],
 				      parMaxes[i]);
-      }//configure delta t if it's a double fit
+				      }//configure delta t if it's a double fit*/
     }
     
     else{
-      f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
+      //f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
+      min->SetFixedVariable(i, parNames[i].c_str(), initialParGuesses[i]);
     }//configure each fixed parameter      
 
   }//end loop over parameters to be configured
-  
-  //connect the function to the trace
-  int nPoints = func.setTrace(trace);
+   //connect the function to the trace
+  func.setTrace(trace);
   if(func.isSeparateBaselineFit()){
     func.findBaseline();
   }
 
   //call the minimizer
-  f.FitFCN(func.getNParameters(),func,0,nPoints,true);
+  //f.FitFCN(func.getNParameters(),func,0,nPoints,true);
+  wasValid = min->Minimize();
+  
+  const double* fittedParameters = min->X();
 
   //grab the results
-  ROOT::Fit::FitResult fitRes = f.Result();
-  wasValid = fitRes.IsValid();
+  /*ROOT::Fit::FitResult fitRes = f.Result();
+    wasValid = fitRes.IsValid();*/
 
-  chi2 = fitRes.Chi2()/fitRes.Ndf();
-  waveform->SetParameters(fitRes.GetParams());
-
+  chi2 = min->MinValue();
+  for (int i = 0; i < func.getNParameters(); ++i){
+    waveform->SetParameter(i, fittedParameters[i]);
+  }
+   
   //for outputting and drawing (for debugging purposes)
   if(drawFit){
     TGraphErrors* traceGraph = new TGraphErrors(func.getTraceLength(), &xPoints[0], trace,NULL,NULL); 
     TFile* outf = new TFile("fitTrace.root","recreate"); 
-    fitRes.Print(cout);
     if(isSingleFit){
       cout << "Scale: " << getScale() << endl;
       cout << "Baseline: " << getBaseline() << endl;
@@ -514,7 +528,7 @@ double pulseFitter::pulseFitFunction::operator() (double* x, double* p){
 }
 
 //the chi2 function to be minimized
-double pulseFitter::pulseFitFunction::operator() (const double* p){
+double pulseFitter::pulseFitFunction::chi2Function(const double* p){
   //check if parameters have been updated
   //if they have, update the scale parameters
   bool updatedParameter = false;
@@ -530,7 +544,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
     for(int i = 0; i <nParameters; ++i){
       lpg[i] = p[i];
     }
-    
+
     if(separateBaselineFit){
       updateScale();
     }
@@ -539,6 +553,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
       updateScaleandPedestal();
     }
   }
+
 
   //evaluate the chi2
   double runningSum = 0;
@@ -553,7 +568,7 @@ double pulseFitter::pulseFitFunction::operator() (const double* p){
       runningSum = runningSum + diff*diff/(error*error);
     }
   }		       
-  
+
   return runningSum;
 }
 
