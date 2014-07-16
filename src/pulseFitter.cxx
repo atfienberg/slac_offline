@@ -252,11 +252,6 @@ double pulseFitter::fitPulse(double* const trace, double error,
   //loop over each function parameter for initial configuration
   for(int i = 0; i<func.getNParameters(); ++i){
     if((i!=1)&&freeParameter[i]){ 
-      /*f.Config().ParSettings(i).Set(parNames[i].c_str(),
-				    initialParGuesses[i],
-				    parSteps[i],
-				    parMins[i],
-				    parMaxes[i]);*/
       min->SetLimitedVariable(i, 
 			       parNames[i].c_str(),
 			       initialParGuesses[i],
@@ -282,7 +277,6 @@ double pulseFitter::fitPulse(double* const trace, double error,
     }
     
     else{
-      //f.Config().ParSettings(i).Set(parNames[i].c_str(),initialParGuesses[i]);
       min->SetFixedVariable(i, parNames[i].c_str(), initialParGuesses[i]);
     }//configure each fixed parameter      
 
@@ -294,15 +288,11 @@ double pulseFitter::fitPulse(double* const trace, double error,
   }
 
   //call the minimizer
-  //f.FitFCN(func.getNParameters(),func,0,nPoints,true);
   wasValid = min->Minimize();
   
   const double* fittedParameters = min->X();
 
   //grab the results
-  /*ROOT::Fit::FitResult fitRes = f.Result();
-    wasValid = fitRes.IsValid();*/
-
   chi2 = min->MinValue();
   for (int i = 0; i < func.getNParameters(); ++i){
     waveform->SetParameter(i, fittedParameters[i]);

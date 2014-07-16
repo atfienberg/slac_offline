@@ -340,15 +340,8 @@ void crunch(const runInfo& rInfo,
     drs_results[i].resize(rInfo.drsInfo.size());
     sis_fast_results[i].resize(rInfo.struckInfo.size());
     adc_results[i].resize(rInfo.adcInfo.size());
-    // crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
-    // crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
-    // crunchDRS(drs, rInfo.drsInfo, drsR, drsFitters);
-    // crunchAdc(adcs, rInfo.adcInfo, ar, wr); 
-    // if( i % 100 == 0){
-    //   cout << i  << " processed" << endl;
-    // }
-    // outTree.Fill();
     sis_fast_data[i].resize(2);
+
     for(unsigned int j = 0; j < sis_fast_data[i].size(); ++j){
       sis_fast_data[i][j] = sFast[j];
     }
@@ -373,6 +366,7 @@ void crunch(const runInfo& rInfo,
   crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results);
   
   t1 = clock();
+  //dump data
   for( int i = 0; i < inTree->GetEntries(); ++i){
     sr = sis_fast_results[i];
     drsR = drs_results[i];
