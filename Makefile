@@ -11,16 +11,20 @@ ifeq ($(UNAME_S), Linux)
 	CC = g++
 endif
 
-CFLAGS = -I. -I./src -Wall -std=c++0x $(shell root-config --cflags) -O3 -fopenmp -ffast-math -march=native -pipe
+CFLAGS = -I. -I./src -Wall -std=c++0x $(shell root-config --cflags) -O3 -ffast-math -march=native -pipe
 SOURCES = $(wildcard src/*.cxx) #Source Code Files
-OBJECTS = $(patsubst src/%.cxx,objects/%.o,$(SOURCES)) #Objects
+OBJECTS = objects/pulseFitter.o
 ROOTLIBS = $(shell root-config --libs) 
 ROOT_DICT = objects/root_dict.o
 TARGET =  slacAnalyzer
 
-$(TARGET): $(OBJECTS) 
-	@echo Linking $@
-	$(CC) $(CFLAGS) $^ -o $@ $(ROOTLIBS)
+$(TARGET): $(OBJECTS) src/slacAnalyzer.cxx
+	@echo Building and Linking $@
+	$(CC) $(CFLAGS) -fopenmp -DBATCH_SIZE=1000 $^ -o $@ $(ROOTLIBS)
+
+slacAnalyzerSequential: $(OBJECTS) src/slacAnalyzer.cxx 
+	@echo Building and Linking $@
+	$(CC) -DBATCH_SIZE=1 $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
 %: src/otherExecutables/%.cxx objects/pulseFitter.o
 	@echo Linking and building $@
