@@ -55,7 +55,7 @@ typedef struct {
   bool good;
 } wireChamberResults;
 
-typedef bool flagResults;
+typedef UShort_t flagResults;
 
 typedef UShort_t adcResults;
 
@@ -73,10 +73,6 @@ typedef struct{
   vector<deviceInfo> adcInfo;
   vector<deviceInfo> drsInfo;
 } runInfo;
-
-typedef struct{
-  double aAmpl;
-} struckSResults;
 
 typedef struct {
   ULong64_t system_clock;
@@ -114,37 +110,42 @@ void crunch(const runInfo& rInfo,
 void initStruck(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& sr,
-		vector< unique_ptr<pulseFitter> >& sFitters);
+		vector< shared_ptr<pulseFitter> >& sFitters);
 
 //crunch through struck devices for a given event
 void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
 		  vector< vector<fitResults> >& sr,
-		  vector< unique_ptr<pulseFitter> >& sFitters); 
+		  vector< vector<flagResults> > flResults, 
+		  vector< shared_ptr<pulseFitter> >& sFitters);
 
 //init for drs devices
 void initDRS(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& drsR,
-		vector< unique_ptr<pulseFitter> >& drsFitters);
+		vector< shared_ptr<pulseFitter> >& drsFitters);
 
 //crunch through drs devices for a given event
 void crunchDRS(vector< vector<drs> >& data, 
 	       const vector<deviceInfo>& devices,
 	       vector< vector<fitResults> >& drsR,
-	       vector< unique_ptr<pulseFitter> >& drsFitters); 
+	       vector< vector<flagResults> > flResults,
+	       vector< shared_ptr<pulseFitter> >& drsFitters);
 
 //init slow struck
 void initStruckS(TTree& outTree, 
 		 const vector<deviceInfo>& devices,
-		 vector<struckSResults>& srSlow,
-		 vector< unique_ptr<pulseFitter> >& slFitters); 
+		 vector<fitResults>& srSlow,
+		 vector<flagResults>& flR,
+		 vector< shared_ptr<pulseFitter> >& slFitters); 
 
 //crunch slow struck, includes beam and laser flags
-void crunchStruckS(sis_slow& s,
+void crunchStruckS(vector< sis_slow >& data,
 		   const vector<deviceInfo>& devices,
-		   vector< vector<struckSResults>& > srSlow,
-		   vector< unique_ptr<pulseFitter> >& slFitters); 
+		   vector< vector<fitResults> >& srSlow,
+		   vector< vector<flagResults> >& flResults,
+		   vector< shared_ptr<pulseFitter> >& slFitters);
+   
 
 //init adc
 void initAdc(TTree& outTree,
@@ -156,7 +157,8 @@ void initAdc(TTree& outTree,
 void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
 	       vector< vector<adcResults> >& ar,
-	       vector< wireChamberResults >& wr);
+	       vector< wireChamberResults >& wr,
+	       vector< vector<flagResults> > flResults);
 
 //check if a file exists
 bool exists(const string& name) {
@@ -297,7 +299,7 @@ void crunch(const runInfo& rInfo,
   inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
   inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
   vector<fitResults> sr(rInfo.struckInfo.size());
-  vector< unique_ptr<pulseFitter> > sFitters;
+  vector< shared_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
 
   //drs
@@ -305,15 +307,16 @@ void crunch(const runInfo& rInfo,
   inTree->SetBranchAddress("caen_drs_0", &drsVec[0]);
   inTree->SetBranchAddress("caen_drs_1", &drsVec[1]);
   vector<fitResults> drsR(rInfo.drsInfo.size());
-  vector< unique_ptr<pulseFitter> > drsFitters;
+  vector< shared_ptr<pulseFitter> > drsFitters;
   initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
 
   //slow struck
   sis_slow s;
   inTree->SetBranchAddress("sis_slow_0",&s);
-  vector<struckSResults> srSlow(rInfo.struckSInfo.size());
-  vector< unique_ptr<pulseFitter> > slFitters;
-  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
+  vector<fitResults> srSlow;
+  vector<flagResults> flResults(rInfo.struckSInfo.size());
+  vector< shared_ptr<pulseFitter> > slFitters;
+  initStruckS(outTree, rInfo.struckSInfo, srSlow, flResults, slFitters);
 
   //adcs
   vector<adc> adcs(2);
@@ -334,6 +337,9 @@ void crunch(const runInfo& rInfo,
     unsigned int thisBatchSize = endEntry - startEntry;
 
     //set up neccesary data structures
+    vector< vector<fitResults> > sis_slow_fit_res;
+    vector< sis_slow > sis_slow_data(thisBatchSize);
+    vector< vector<flagResults> > sis_slow_results(thisBatchSize);
     vector< vector<sis_fast> > sis_fast_data(thisBatchSize);
     vector< vector<fitResults> > sis_fast_results(thisBatchSize);
     vector< vector<drs> > drs_data(thisBatchSize);
@@ -347,10 +353,14 @@ void crunch(const runInfo& rInfo,
       inTree->GetEntry(i);
       unsigned int dataIndex = i - startEntry;
 
+      sis_slow_results[dataIndex].resize(rInfo.struckSInfo.size());
       drs_results[dataIndex].resize(rInfo.drsInfo.size());
       sis_fast_results[dataIndex].resize(rInfo.struckInfo.size());
       adc_results[dataIndex].resize(rInfo.adcInfo.size());
       sis_fast_data[dataIndex].resize(2);
+
+
+      sis_slow_data[dataIndex] = s;
 
       for(unsigned int j = 0; j < sis_fast_data[dataIndex].size(); ++j){
 	sis_fast_data[dataIndex][j] = sFast[j];
@@ -368,9 +378,11 @@ void crunch(const runInfo& rInfo,
     }    
 
     //crunch data
-    crunchStruck(sis_fast_data, rInfo.struckInfo, sis_fast_results, sFitters);
-    crunchDRS(drs_data, rInfo.drsInfo, drs_results, drsFitters);
-    crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results);
+    crunchStruckS(sis_slow_data, rInfo.struckSInfo, sis_slow_fit_res, sis_slow_results,
+		  slFitters);
+    crunchStruck(sis_fast_data, rInfo.struckInfo, sis_fast_results, sis_slow_results, sFitters);
+    crunchDRS(drs_data, rInfo.drsInfo, drs_results, sis_slow_results, drsFitters);
+    crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results, sis_slow_results);
 
     //dump data
     for(unsigned int i = 0; i < thisBatchSize; ++i){
@@ -378,6 +390,7 @@ void crunch(const runInfo& rInfo,
       drsR = drs_results[i];
       wr = wire_results[i];
       ar = adc_results[i];
+      flResults = sis_slow_results[i];
       outTree.Fill();
     }
 
@@ -392,7 +405,7 @@ void crunch(const runInfo& rInfo,
 void initTraceDevice(TTree& outTree, 
 		     const deviceInfo& device,
 		     fitResults* fr,
-		     vector< unique_ptr<pulseFitter> >& fitters){
+		     vector< shared_ptr<pulseFitter> >& fitters){
   
   //initialize output tree branch for this device
   outTree.Branch(device.name.c_str(), fr,
@@ -403,28 +416,28 @@ void initTraceDevice(TTree& outTree,
   string config = string("configs/") + device.name + string(".json");
    //beam configs
   if (exists(config)){
-    fitters.push_back(unique_ptr< pulseFitter >
+    fitters.push_back(shared_ptr< pulseFitter >
 		       (new pulseFitter((char*)config.c_str())));
   } 
 
   else{
     cout << config << " not found. "
 	 << "Using default config." << endl;
-    fitters.push_back(unique_ptr< pulseFitter >
+    fitters.push_back(shared_ptr< pulseFitter >
 		      (new pulseFitter()));
   }
     
   //laser configs
   config = string("configs/") + device.name + string("Laser.json");
   if (exists(config)){
-    fitters.push_back(unique_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
+    fitters.push_back(shared_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
   }
     
   else{
     cout << config << " not found. "
-	 << "Using default laser config." << endl;
-    fitters.push_back(unique_ptr< pulseFitter >
-		       (new pulseFitter((char*)"configs/.defaultLaserConfig.json")));
+	 << "Using beam config." << endl;
+    config = string("configs/") + device.name + string(".json");
+    fitters.push_back(fitters[fitters.size()-1]);
   } 
 }
 
@@ -524,7 +537,7 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
 void initStruck(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& sr,
-		vector< unique_ptr<pulseFitter> >& sFitters){
+		vector< shared_ptr<pulseFitter> >& sFitters){
   //initialize each device
   for(unsigned int i = 0; i < devices.size(); ++i){
     initTraceDevice(outTree, devices[i], &sr[i], sFitters);
@@ -534,15 +547,16 @@ void initStruck(TTree& outTree,
 void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
 		  vector< vector<fitResults> >& sr,
-		  vector< unique_ptr<pulseFitter> >& sFitters){
+		  vector< vector<flagResults> > flResults,
+		  vector< shared_ptr<pulseFitter> >& sFitters){
   
   //temp
-  int laserRun = 0;
   
   //loop over each device 
-  #pragma omp parallel for
+  #pragma omp parallel for firstprivate(flResults)
   for(unsigned int j = 0; j < devices.size(); ++j){
     for( unsigned int i = 0; i < data.size(); ++i){
+      UShort_t laserRun = flResults[i][1];
       fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
 		sr[i][j], 
 		*sFitters[2*j+laserRun], devices[j]);
@@ -553,7 +567,7 @@ void crunchStruck(vector< vector<sis_fast> >& data,
 void initDRS(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& drsR,
-		vector< unique_ptr<pulseFitter> >& drsFitters){
+		vector< shared_ptr<pulseFitter> >& drsFitters){
   
   //initialize each device
   for(unsigned int i = 0; i < devices.size(); ++i){
@@ -575,15 +589,16 @@ void filterTrace(UShort_t* trace){
 void crunchDRS(vector< vector<drs> >& data, 
 	       const vector<deviceInfo>& devices,
 	       vector< vector<fitResults> >& drsR,
-	       vector< unique_ptr<pulseFitter> >& drsFitters){
+	       vector< vector<flagResults> > flResults,
+	       vector< shared_ptr<pulseFitter> >& drsFitters){
   
   //temp
-  int laserRun = 0;
 
   //loop over each device 
-  #pragma omp parallel for
+  #pragma omp parallel for firstprivate(flResults)
   for(unsigned int j = 0; j < devices.size(); ++j){
     for(unsigned int i = 0; i < data.size(); ++i){
+      UShort_t laserRun = flResults[i][1];
       filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel]);
       fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
 		drsR[i][j], 
@@ -592,28 +607,66 @@ void crunchDRS(vector< vector<drs> >& data,
   }
 }
 
-void initStruckS(TTree& outTree, 
+/*void initStruckS(TTree& outTree, 
 		 const vector<deviceInfo>& devices,
 		 vector<struckSResults>& srSlow,
-		 vector< unique_ptr<pulseFitter> >& slFitters){
+		 vector< shared_ptr<pulseFitter> >& slFitters){
   
   for (unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(), &srSlow[i], "aAmpl/D");
   }
+  }*/
+
+
+//beam flag MUST come first in config file
+//fix to work with arbitrary order of things in runjson
+void initStruckS(TTree& outTree, 
+		 const vector<deviceInfo>& devices,
+		 vector<fitResults>& srSlow,
+		 vector<flagResults>& flR,
+		 vector< shared_ptr<pulseFitter> >& slFitters){
+  
+  for (unsigned int i = 0; i < devices.size(); ++i){
+    if(devices[i].name == "beamFlag" || devices[i].name == "laserFlag"){
+      outTree.Branch(devices[i].name.c_str(), &flR[i], "flag/O");
+    }
+  }
 }
 
 //completely temporary implementation
-void crunchStruckS(sis_slow& s,
+/*void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
-		   vector< unique_ptr<pulseFitter> >& slFitters){
+		   vector< shared_ptr<pulseFitter> >& slFitters){
   if(devices.size()>0){
     double baseline = accumulate(s.trace[4],s.trace[4]+20,0)/20;
     double ampl = *max_element(s.trace[4],s.trace[4]+TRACELENGTH)-baseline;
     srSlow[0].aAmpl = ampl;
   }
 }
+*/
+ 
+void crunchStruckS(vector< sis_slow >& data,
+		   const vector<deviceInfo>& devices,
+		   vector< vector<fitResults> >& srSlow,
+		   vector< vector<flagResults> >& flResults,
+		   vector< shared_ptr<pulseFitter> >& slFitters){
   
+  #pragma omp parallel for
+  for(unsigned int j = 0; j < devices.size(); ++j){
+    for(unsigned int i = 0; i < data.size(); ++i){
+      //IMPLEMENT BEAM CHECK
+      UShort_t max = *max_element(data[i].trace[devices[j].channel], 
+			 data[i].trace[devices[j].channel]+TRACELENGTH);
+      if (max > 35000){
+	flResults[i][j] = 1;
+      }
+      else
+	flResults[i][j] = 0;
+    }
+  }
+}
+      
 
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
@@ -700,13 +753,19 @@ void computeWireChamber(const UShort_t* adc1,
 void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
 	       vector< vector<adcResults> >& ar,
-	       vector< wireChamberResults >& wr){
+	       vector< wireChamberResults >& wr,
+	       vector< vector<flagResults> > flResults){
 
-  #pragma omp parallel for
+  #pragma omp parallel for firstprivate(flResults)
   for(unsigned int i = 0; i < devices.size(); ++i){
     for(unsigned int j = 0; j < adc_data.size(); ++j){
       if (devices[i].name == "wireChamber"){
-	computeWireChamber(adc_data[j][0].value, adc_data[j][1].value, wr[j]);
+	if(flResults[i][0]==1){
+	  computeWireChamber(adc_data[j][0].value, adc_data[j][1].value, wr[j]);
+	}
+	else{
+	  wr[i].good = false;
+        }
       }
    
       else{

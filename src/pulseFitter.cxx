@@ -395,7 +395,7 @@ double pulseFitter::getSum(int start, int length){
 double pulseFitter::pulseFitFunction::evalSum(int start, int length){
   //check the bounds
   if(start<0 || ((start+length) > getTraceLength()) ){
-    cerr << "Error in sum: invalid limits. " << endl;
+    //  cerr << "Error in sum: invalid limits. " << endl;
     return 0;
   }
   
