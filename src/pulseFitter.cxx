@@ -282,7 +282,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
 
   }//end loop over parameters to be configured
    //connect the function to the trace
-  func.setTrace(trace);
+  int nPoints = func.setTrace(trace);
   if(func.isSeparateBaselineFit()){
     func.findBaseline();
   }
@@ -293,7 +293,7 @@ double pulseFitter::fitPulse(double* const trace, double error,
   const double* fittedParameters = min->X();
 
   //grab the results
-  chi2 = min->MinValue();
+  chi2 = min->MinValue()/nPoints;
   for (int i = 0; i < func.getNParameters(); ++i){
     waveform->SetParameter(i, fittedParameters[i]);
   }

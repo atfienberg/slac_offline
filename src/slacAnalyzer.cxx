@@ -49,8 +49,8 @@ typedef struct {
 } fitResults;
 
 typedef struct {
-  float cathode_x;
-  float cathode_y;
+  float cathodeX;
+  float cathodeY;
   float anode;
   bool good;
 } wireChamberResults;
@@ -634,15 +634,67 @@ void initAdc(TTree& outTree,
   
 }
 
+
+//WIRE CHAMBER FUNCTIONS FROM PETE
+
+float compute_cathode_position(UShort_t c[]){ // center of gravity approach
+
+  // the array provided needs to be length six and have the channels
+  // mapped so that the c[0] corresponds to the -20 position and c[5] corresponds to 20
+
+    float cathode_position = 0;
+    float cathode_sum = 0;
+    for(int i=0;i<6;i++){
+      if(c[i]<4000.){
+	cathode_position += c[i]*(-20.+(i)*8.); // 20 and 8 are mm and come from the physical parameters of the device
+	cathode_sum += c[i];
+      }
+    }
+    cathode_position /= cathode_sum;
+
+    if(cathode_sum>500)   return cathode_position;
+    else {
+      return -30;
+    }
+} // end compute_cathode_position
+
+float compute_anode_position(UShort_t a1, UShort_t a2){ // charge division approach
+
+  if(a1>600.&&a2>600.&&a1<4000.&&a2<4000.){ // cuts for valid signals
+    // anode 1 calib 260 // anode 2 calib 350
+    float cal = 350./260.; // scale to make a1 signal same size as a2
+    float L = 21.; //half length scale of device in mm
+    float anode_position = L * (cal*a1-a2)/(cal*a1+a2);
+    return anode_position;
+  } 
+  else {
+    return -30;
+  }
+} // end compute_anode_position
+
+
+//END FUNCTIONS FROM PETE
+
+//implementing pete's wire chamber analysis code
 void computeWireChamber(const UShort_t* adc1,
 			const UShort_t* adc2,
 			wireChamberResults& wr){
 
-  //temp implementation
-  wr.cathode_x = 5;
-  wr.cathode_y = 5;
-  wr.anode = 5;
   wr.good = true;
+
+  UShort_t cathodeXVals[6] = {adc1[7], adc1[6], adc1[5],
+			      adc1[4], adc1[3], adc1[2]};
+  
+  UShort_t cathodeYVals[6] = {adc2[7], adc2[6], adc2[5],
+			      adc2[4], adc2[3], adc2[2]};
+  
+  wr.anode = compute_anode_position(adc1[1], adc1[0]);
+  wr.cathodeX = compute_cathode_position(cathodeXVals);
+  wr.cathodeY = compute_cathode_position(cathodeYVals);
+
+  if(wr.anode == -30 || wr.cathodeX == -30 || wr.cathodeY == -30){
+    wr.good = false;
+  }
 }
 
 void crunchAdc(const vector< vector<adc> >& adc_data,
