@@ -453,14 +453,18 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
 
   //template
   if(fitter.getFitType() == string("template")){
-    fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
+    if(device.moduleType == string("drs"))
+      fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
+    else
+      fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
+   
   }
     
   //parametric
   else{
     if(device.moduleType == string("drs"))
       fitter.setFitStart(maxdex - fitter.getFitLength() + 3);  
-    else if(device.moduleType == string("struck"))
+    else
       fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
   }
 						       			       
@@ -472,8 +476,8 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
   //template
   if(fitter.getFitType() == string("template")){
     fitter.setParameterGuess(0,maxdex);
-    fitter.setParameterMin(0,maxdex-1);
-    fitter.setParameterMax(0,maxdex+1);
+    fitter.setParameterMin(0,maxdex-3);
+    fitter.setParameterMax(0,maxdex+3);
   }
       
   //parametric lsaer
@@ -544,6 +548,17 @@ void initStruck(TTree& outTree,
   }
 }
 
+void filterTrace(UShort_t* trace, int length){
+  int filterLength = length;
+  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
+    int runningSum = 0;
+    for(int j = 0; j < filterLength; ++j){
+      runningSum+=trace[i+j];
+    }
+    trace[i] = runningSum/filterLength;
+  }
+} 
+
 void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
 		  vector< vector<fitResults> >& sr,
@@ -557,6 +572,7 @@ void crunchStruck(vector< vector<sis_fast> >& data,
   for(unsigned int j = 0; j < devices.size(); ++j){
     for( unsigned int i = 0; i < data.size(); ++i){
       UShort_t laserRun = flResults[i][1];
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], 5);
       fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
 		sr[i][j], 
 		*sFitters[2*j+laserRun], devices[j]);
@@ -573,18 +589,7 @@ void initDRS(TTree& outTree,
   for(unsigned int i = 0; i < devices.size(); ++i){
     initTraceDevice(outTree, devices[i], &drsR[i], drsFitters);
   }
-}
-
-const int filterLength = 10;
-void filterTrace(UShort_t* trace){
-  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
-    int runningSum = 0;
-    for(int j = 0; j < filterLength; ++j){
-      runningSum+=trace[i+j];
-    }
-    trace[i] = runningSum/filterLength;
-  }
-}  
+} 
 
 void crunchDRS(vector< vector<drs> >& data, 
 	       const vector<deviceInfo>& devices,
@@ -599,7 +604,7 @@ void crunchDRS(vector< vector<drs> >& data,
   for(unsigned int j = 0; j < devices.size(); ++j){
     for(unsigned int i = 0; i < data.size(); ++i){
       UShort_t laserRun = flResults[i][1];
-      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel]);
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], 10);
       fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
 		drsR[i][j], 
 		*drsFitters[2*j+laserRun], devices[j]);
