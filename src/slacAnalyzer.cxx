@@ -453,7 +453,7 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
 
   //template
   if(fitter.getFitType() == string("template")){
-    fitter.setFitStart(maxdex - fitter.getFitLength()/2);
+    fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
   }
     
   //parametric
@@ -626,10 +626,17 @@ void initStruckS(TTree& outTree,
 		 vector<flagResults>& flR,
 		 vector< shared_ptr<pulseFitter> >& slFitters){
   
+  int flagIndex = 0;
   for (unsigned int i = 0; i < devices.size(); ++i){
     if(devices[i].name == "beamFlag" || devices[i].name == "laserFlag"){
-      outTree.Branch(devices[i].name.c_str(), &flR[i], "flag/O");
+      outTree.Branch(devices[i].name.c_str(), &flR[flagIndex], "flag/O");
+      ++flagIndex;
+      slFitters.push_back(NULL);
+      slFitters.push_back(NULL);
     }
+    /*else{
+      initTraceDevice(outTree, devices[i], &srSlow[i], slFitters);
+      }*/
   }
 }
 
@@ -655,18 +662,17 @@ void crunchStruckS(vector< sis_slow >& data,
   #pragma omp parallel for
   for(unsigned int j = 0; j < devices.size(); ++j){
     for(unsigned int i = 0; i < data.size(); ++i){
-      //IMPLEMENT BEAM CHECK
       UShort_t max = *max_element(data[i].trace[devices[j].channel], 
-			 data[i].trace[devices[j].channel]+TRACELENGTH);
-      if (max > 35000){
+				    data[i].trace[devices[j].channel]+TRACELENGTH);
+      if (max > 32000){
 	flResults[i][j] = 1;
       }
-      else
+      else{
 	flResults[i][j] = 0;
+      }
     }
   }
 }
-      
 
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
