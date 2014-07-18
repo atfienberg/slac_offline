@@ -1,6 +1,6 @@
 {
   "digitizer_specs": {
-    "sample_rate"        :1.0,
+    "sample_rate"        :0.5,
     "trace_length"       :1024,
     "clip_cut_high"      :60000,
     "clip_cut_low"       :15
@@ -9,8 +9,8 @@
   "fit_specs": {
     "fit_type"          : "template",
     "template_file"     : "templates/sipm37Template.root",
-    "template_buffer"   : 40,
-    "template_length"   :100,
+    "template_buffer"   : 20,
+    "template_length"   :50,
     "fit"               : true,
     "n_parameters"      :    2,	 	
     "parameter_names"   : ["time", "Delta T"],
@@ -20,7 +20,7 @@
     "parameter_mins"    : [365, 0.1],
     "parameter_maxes"   : [372, 20],
     "fit_start"         :355,
-    "fit_length"        :25,
+    "fit_length"        :8,
     "base_fit_length"   :40,
     "base_fit_buffer"   :40,
     "separate_baseline_fit"   : false,
