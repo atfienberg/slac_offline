@@ -313,7 +313,7 @@ void crunch(const runInfo& rInfo,
   //slow struck
   sis_slow s;
   inTree->SetBranchAddress("sis_slow_0",&s);
-  vector<fitResults> srSlow;
+  vector<fitResults> srSlow(rInfo.struckSInfo.size());;
   vector<flagResults> flResults(rInfo.struckSInfo.size());
   vector< shared_ptr<pulseFitter> > slFitters;
   initStruckS(outTree, rInfo.struckSInfo, srSlow, flResults, slFitters);
@@ -337,7 +337,7 @@ void crunch(const runInfo& rInfo,
     unsigned int thisBatchSize = endEntry - startEntry;
 
     //set up neccesary data structures
-    vector< vector<fitResults> > sis_slow_fit_res;
+    vector< vector<fitResults> > sis_slow_fit_res(thisBatchSize);
     vector< sis_slow > sis_slow_data(thisBatchSize);
     vector< vector<flagResults> > sis_slow_results(thisBatchSize);
     vector< vector<sis_fast> > sis_fast_data(thisBatchSize);
@@ -354,6 +354,7 @@ void crunch(const runInfo& rInfo,
       unsigned int dataIndex = i - startEntry;
 
       sis_slow_results[dataIndex].resize(rInfo.struckSInfo.size());
+      sis_slow_fit_res[dataIndex].resize(rInfo.struckSInfo.size());
       drs_results[dataIndex].resize(rInfo.drsInfo.size());
       sis_fast_results[dataIndex].resize(rInfo.struckInfo.size());
       adc_results[dataIndex].resize(rInfo.adcInfo.size());
@@ -390,6 +391,7 @@ void crunch(const runInfo& rInfo,
       drsR = drs_results[i];
       wr = wire_results[i];
       ar = adc_results[i];
+      srSlow = sis_slow_fit_res[i];
       flResults = sis_slow_results[i];
       outTree.Fill();
     }
@@ -450,22 +452,36 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
   else{
     maxdex = min_element(trace, trace + TRACELENGTH) - trace;
   }
-
   //template
   if(fitter.getFitType() == string("template")){
     if(device.moduleType == string("drs"))
       fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
+    else if(device.name == "pin")
+      fitter.setFitStart(maxdex - fitter.getFitLength()/2);
     else
       fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
    
   }
     
   //parametric
-  else{
+  else if (fitter.getFitType() == string("laser")){
     if(device.moduleType == string("drs"))
       fitter.setFitStart(maxdex - fitter.getFitLength() + 3);  
-    else
+    else{
       fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
+    }
+  }
+
+  else if (device.name == "slowMonitor"){
+    double top = 0;
+    double bottom = 0;
+    for(int i = 0; i < 20; ++i){
+      top = top + trace[i+300];
+      bottom= bottom + trace[i+200];
+    }
+    fr.baseline = bottom/20.0;
+    fr.energy = top/20.0 -fr.baseline;
+    return;
   }
 						       			       
   fr.aSum = fitter.getSum(trace,fitter.getFitStart(),fitter.getFitLength());
@@ -474,34 +490,35 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
 
   //set fit config based on maxdex
   //template
-  if(fitter.getFitType() == string("template")){
-    fitter.setParameterGuess(0,maxdex);
-    fitter.setParameterMin(0,maxdex-3);
-    fitter.setParameterMax(0,maxdex+3);
-  }
+  if(fitter.isFitConfigured()){
+    if(fitter.getFitType() == string("template")){
+      fitter.setParameterGuess(0,maxdex);
+      fitter.setParameterMin(0,maxdex-3);
+      fitter.setParameterMax(0,maxdex+3);
+    }
       
-  //parametric lsaer
-  else if (fitter.getFitType() == string("laser")){
-    if (device.moduleType == string("drs")){
-      fitter.setParameterGuess(0,maxdex-4);
-      fitter.setParameterMin(0,maxdex-6);
+    //parametric lsaer
+    else if (fitter.getFitType() == string("laser")){
+      if (device.moduleType == string("drs")){
+	fitter.setParameterGuess(0,maxdex-4);
+	fitter.setParameterMin(0,maxdex-6);
+	fitter.setParameterMax(0,maxdex-2);
+      }
+      else if (device.moduleType == string("struck")){
+	fitter.setParameterGuess(0,maxdex-2);
+	fitter.setParameterMin(0,maxdex-3);
+	fitter.setParameterMax(0,maxdex-1);
+      }
+    }
+    //parametric beam
+    else if (fitter.getFitType() == string("beam")){
+      fitter.setParameterGuess(0,maxdex-3);
+      fitter.setParameterMin(0,maxdex-4);
       fitter.setParameterMax(0,maxdex-2);
     }
-    else if (device.moduleType == string("struck")){
-      fitter.setParameterGuess(0,maxdex-2);
-      fitter.setParameterMin(0,maxdex-3);
-      fitter.setParameterMax(0,maxdex-1);
-    }
-  }
-  //parametric beam
-  else if (fitter.getFitType() == string("beam")){
-    fitter.setParameterGuess(0,maxdex-3);
-    fitter.setParameterMin(0,maxdex-4);
-    fitter.setParameterMax(0,maxdex-2);
-  }
 
-  //do the fits
-  if(fitter.isFitConfigured()){
+    //do the fits
+
     fitter.fitSingle(trace);
     
     if(fitter.getFitType() == string("template")){
@@ -521,9 +538,10 @@ void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const devic
 	
     //fill fitTrace
     fitter.fillFitTrace(fr.fitTrace,
-			 fitter.getFitStart(),
-			 CHOPPED_TRACE_LENGTH);     
+			fitter.getFitStart(),
+			CHOPPED_TRACE_LENGTH);     
   }
+  
 
   //fill trace
   for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
@@ -639,9 +657,9 @@ void initStruckS(TTree& outTree,
       slFitters.push_back(NULL);
       slFitters.push_back(NULL);
     }
-    /*else{
+    else{
       initTraceDevice(outTree, devices[i], &srSlow[i], slFitters);
-      }*/
+   }
   }
 }
 
@@ -658,6 +676,9 @@ void initStruckS(TTree& outTree,
 }
 */
  
+
+
+//my automatic indenting isn't working here for some reason...
 void crunchStruckS(vector< sis_slow >& data,
 		   const vector<deviceInfo>& devices,
 		   vector< vector<fitResults> >& srSlow,
@@ -666,7 +687,9 @@ void crunchStruckS(vector< sis_slow >& data,
   
   #pragma omp parallel for
   for(unsigned int j = 0; j < devices.size(); ++j){
+
     for(unsigned int i = 0; i < data.size(); ++i){
+      if((devices[j].name == "beamFlag") || (devices[j].name == "laserFlag")){ 
       UShort_t max = *max_element(data[i].trace[devices[j].channel], 
 				    data[i].trace[devices[j].channel]+TRACELENGTH);
       if (max > 32000){
@@ -675,8 +698,19 @@ void crunchStruckS(vector< sis_slow >& data,
       else{
 	flResults[i][j] = 0;
       }
-    }
-  }
+}
+  else{
+    if(devices[j].name == "slowMonitor")
+      fitDevice(data[i].trace[devices[j].channel],srSlow[i][j], *slFitters[2*j], devices[j]);
+  
+    else{
+      filterTrace(data[i].trace[devices[j].channel], 5);
+      fitDevice(data[i].trace[devices[j].channel],srSlow[i][j], *slFitters[2*j], devices[j]);
+}
+	
+}
+}
+}
 }
 
 void initAdc(TTree& outTree,
@@ -699,7 +733,7 @@ void initAdc(TTree& outTree,
 }
 
 
-//WIRE CHAMBER FUNCTIONS FROM PETE
+//WIRE CHAMBER FUNCTIONS FROM PETE 
 
 float compute_cathode_position(UShort_t c[]){ // center of gravity approach
 
