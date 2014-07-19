@@ -443,7 +443,7 @@ void initTraceDevice(TTree& outTree,
   } 
 }
 
-void fitDevice(UShort_t* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
+void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
   //get summary information from the trace
   int maxdex;
   if(!device.neg){
@@ -566,14 +566,17 @@ void initStruck(TTree& outTree,
   }
 }
 
-void filterTrace(UShort_t* trace, int length){
+void filterTrace(UShort_t* trace, double* fTrace, int length){
   int filterLength = length;
   for(int i = 0; i < TRACELENGTH-filterLength; ++i){
-    int runningSum = 0;
+    double runningSum = 0;
     for(int j = 0; j < filterLength; ++j){
       runningSum+=trace[i+j];
     }
-    trace[i] = runningSum/filterLength;
+    fTrace[i] = runningSum/filterLength;
+  }
+  for(int i = TRACELENGTH - filterLength; i < TRACELENGTH; ++i){
+    fTrace[i] = fTrace[i-1];
   }
 } 
 
@@ -590,8 +593,9 @@ void crunchStruck(vector< vector<sis_fast> >& data,
   for(unsigned int j = 0; j < devices.size(); ++j){
     for( unsigned int i = 0; i < data.size(); ++i){
       UShort_t laserRun = flResults[i][1];
-      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], 5);
-      fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel],fTrace,5);
+      fitDevice(fTrace,
 		sr[i][j], 
 		*sFitters[2*j+laserRun], devices[j]);
     }   
@@ -622,8 +626,9 @@ void crunchDRS(vector< vector<drs> >& data,
   for(unsigned int j = 0; j < devices.size(); ++j){
     for(unsigned int i = 0; i < data.size(); ++i){
       UShort_t laserRun = flResults[i][1];
-      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], 10);
-      fitDevice(data[i][devices[j].moduleNum].trace[devices[j].channel],
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 10);
+      fitDevice(fTrace,
 		drsR[i][j], 
 		*drsFitters[2*j+laserRun], devices[j]);
     }
@@ -700,12 +705,16 @@ void crunchStruckS(vector< sis_slow >& data,
       }
 }
   else{
-    if(devices[j].name == "slowMonitor")
-      fitDevice(data[i].trace[devices[j].channel],srSlow[i][j], *slFitters[2*j], devices[j]);
-  
+    if(devices[j].name == "slowMonitor"){
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i].trace[devices[j].channel], fTrace, 1);
+      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
+      
+    }
     else{
-      filterTrace(data[i].trace[devices[j].channel], 5);
-      fitDevice(data[i].trace[devices[j].channel],srSlow[i][j], *slFitters[2*j], devices[j]);
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i].trace[devices[j].channel], fTrace, 5);
+      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
 }
 	
 }
