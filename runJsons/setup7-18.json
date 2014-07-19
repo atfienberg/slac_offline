@@ -4,25 +4,29 @@
             "detector_type": "sipm",
             "channel": 3,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":4546
         },
 	"sipm23": {
             "detector_type": "sipm",
             "channel": 7,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":3814
 	},
 	"sipm24": {
             "detector_type": "sipm",
             "channel": 11,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":1378
         },
 	"sipm25": {
 	    "detector_type": "sipm",
 	    "channel": 15,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":1508
 	},
 	"sipm26": {
             "detector_type": "sipm",
@@ -34,25 +38,29 @@
             "detector_type": "sipm",
             "channel": 2,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":3935
         },
 	"sipm33": {
             "detector_type": "sipm",
             "channel": 6,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":2118
 	},
 	"sipm34": {
             "detector_type": "sipm",
             "channel": 10,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":633
         },
 	"sipm35": {
 	    "detector_type": "sipm",
 	    "channel": 14,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":356.6  
 	},
 	"sipm36": {
             "detector_type": "sipm",
@@ -70,25 +78,29 @@
             "detector_type": "sipm",
             "channel": 1,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":1256
         },
 	"sipm43": {
             "detector_type": "sipm",
             "channel": 5,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":633
 	},
 	"sipm44": {
             "detector_type": "sipm",
             "channel": 9,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":349
         },
 	"sipm45": {
 	    "detector_type": "sipm",
 	    "channel": 13,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":761
 	},
 	"sipm46": {
             "detector_type": "sipm",
@@ -106,25 +118,29 @@
             "detector_type": "sipm",
             "channel": 0,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":2084
         },
 	"sipm53": {
             "detector_type": "sipm",
             "channel": 4,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":914
 	},
 	"sipm54": {
             "detector_type": "sipm",
             "channel": 8,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":1493
         },
 	"sipm55": {
 	    "detector_type": "sipm",
 	    "channel": 12,
             "module": "drs",
-	    "module_num": 0
+	    "module_num": 0,
+	    "calib_constant":318
 	},
 	"sipm56": {
             "detector_type": "sipm",

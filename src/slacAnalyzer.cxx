@@ -62,6 +62,7 @@ typedef UShort_t adcResults;
 typedef struct {
   string name;
   string moduleType;
+  double calibrationConstant;
   int moduleNum;
   int channel;
   bool neg;
@@ -249,6 +250,12 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	thisDevice.name = subtree.first;
 	thisDevice.moduleType = subtree.second.get<string>("module");
 	thisDevice.channel = subtree.second.get<int>("channel");  
+	if(subtree.second.get_child_optional("calib_constant")){
+	  thisDevice.calibrationConstant = subtree.second.get<double>("calib_constant");
+	}
+	else{
+	  thisDevice.calibrationConstant = 1.0;
+	}
 	if(subtree.second.get_child_optional("polarity")){
 	  thisDevice.neg = true;
 	}
@@ -326,6 +333,11 @@ void crunch(const runInfo& rInfo,
   wireChamberResults wr;
   initAdc(outTree, rInfo.adcInfo, ar, &wr);
   
+  //energy sum
+  double energySum;
+
+  outTree.Branch("energySum", &energySum,"energySum/D");
+
   //end initialization routines
   
   //load-crunch-dump loop, processes data in chunks of BATCH_SIZE
@@ -393,6 +405,16 @@ void crunch(const runInfo& rInfo,
       ar = adc_results[i];
       srSlow = sis_slow_fit_res[i];
       flResults = sis_slow_results[i];
+      bool beamFlag = flResults[0];
+      bool laserFlag = flResults[1];
+      energySum = 0;
+      if(beamFlag && !laserFlag){
+	for ( auto result : drsR ){
+	  if (result.energy > 0.1){
+	    energySum += result.energy;
+	  }
+	}
+      }
       outTree.Fill();
     }
 
@@ -445,6 +467,8 @@ void initTraceDevice(TTree& outTree,
 
 void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
   //get summary information from the trace
+  //cout << device.name << endl;
+
   int maxdex;
   if(!device.neg){
     maxdex = max_element(trace,trace+TRACELENGTH) - trace;
@@ -532,6 +556,7 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
 	(1/(fitter.getParameter(5)+fitter.getParameter(4))*
 	 (fitter.getParameter(3)+fitter.getParameter(5)));
     }
+    fr.energy = fr.energy/device.calibrationConstant;
     fr.chi2 = fitter.getChi2();
     fr.time = fitter.getTime();
     fr.valid = fitter.wasValidFit();
