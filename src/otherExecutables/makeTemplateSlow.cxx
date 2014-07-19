@@ -20,18 +20,18 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 50;
+const int TEMPLATELENGTH = 600;
 const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 5;
 const int DEFAULTSTRUCKCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
-const int BUFFERZONE = 20;
+const int BUFFERZONE = 50;
 
 typedef struct {
   ULong64_t system_clock;
-  ULong64_t device_clock[4];
-  UShort_t trace[4][1024];
+  ULong64_t device_clock[8];
+  UShort_t trace[8][1024];
 } sis_fast;
 
 typedef struct traceSummary{
@@ -76,10 +76,10 @@ int main(int argc, char* argv[]) {
   TTree* t = (TTree*) infile.Get("t");
   sis_fast s;
   if(argv[3][0] == '0'){
-    t->SetBranchAddress("sis_fast_0", &s);
+    t->SetBranchAddress("sis_slow_0", &s);
   }
   else{
-    t->SetBranchAddress("sis_fast_1", &s);
+    t->SetBranchAddress("sis_slow_1", &s);
   }
   
   //process traces
@@ -214,7 +214,7 @@ traceSummary processTrace(unsigned short* trace){
   //find maximum
   int maxdex = 0;
   for(int i = 0; i < TRACELENGTH; ++i){
-    maxdex = trace[i] > trace[maxdex] ? i : maxdex;
+    maxdex = trace[i] < trace[maxdex] ? i : maxdex;
  }
  results.peakIndex = maxdex;
 
