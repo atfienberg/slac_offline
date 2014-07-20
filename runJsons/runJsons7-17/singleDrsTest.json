@@ -1,0 +1,13 @@
+{
+    "devices": {
+        "sipm55": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "drs",
+	    "module_num": 0
+        }
+    },
+    "run_info": {
+        "number": "0"	
+    }
+}

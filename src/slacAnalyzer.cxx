@@ -334,9 +334,12 @@ void crunch(const runInfo& rInfo,
   initAdc(outTree, rInfo.adcInfo, ar, &wr);
   
   //energy sum
-  double energySum;
+  double energySumDRS;
+  double energySumStruck;
 
-  outTree.Branch("energySum", &energySum,"energySum/D");
+  outTree.Branch("energySumDRS", &energySumDRS,"energySumDRS/D");
+  outTree.Branch("energySumStruck", &energySumStruck,"energySumStruck/D");
+  
 
   //end initialization routines
   
@@ -407,18 +410,37 @@ void crunch(const runInfo& rInfo,
       flResults = sis_slow_results[i];
       bool beamFlag = flResults[0];
       bool laserFlag = flResults[1];
-      energySum = 0;
+
+      energySumDRS = 0;
+      const char* sumSipms[8] = {"sipm23","sipm24",
+				 "sipm32", "sipm33","sipm34",
+				 "sipm42","sipm43","sipm44"};
       if(beamFlag && !laserFlag){
-	for ( auto result : drsR ){
-	  if (result.energy > 0.1){
-	    energySum += result.energy;
+	for (unsigned int k = 0; k < drsR.size(); ++k ){
+	  for(int namedex = 0; namedex < 8; ++namedex){
+	    if(rInfo.drsInfo[k].name == sumSipms[namedex]){
+	      //if (drsR[k].energy > 0.01){
+	      //	cout << rInfo.drsInfo[k].name << endl;
+		energySumDRS += drsR[k].energy;
+		//}
+	    }
 	  }
 	}
       }
+      // cout << "drs sum done." << endl;
+      energySumStruck = 0;
+      if(beamFlag && !laserFlag){
+	for (unsigned int k = 0; k < sr.size(); ++ k){
+	  if (sr[k].energy > 0.1 && rInfo.struckInfo[k].name!="paddle"){
+	    energySumStruck += sr[k].energy;
+	  }
+	}
+      }
+
       outTree.Fill();
     }
-
     cout << "processed up to event " << endEntry << endl;
+ 
 
     startEntry = endEntry;
     endEntry = endEntry + BATCH_SIZE < inTree->GetEntries() 

@@ -1,0 +1,55 @@
+{
+    "devices": {
+        "sipm52": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm53": {
+            "detector_type": "sipm",
+            "channel": 4,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm54": {
+            "detector_type": "sipm",
+            "channel": 8,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm55": {
+	    "detector_type": "sipm",
+	    "channel": 1,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm56": {
+            "detector_type": "sipm",
+            "channel": 5,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm57": {
+            "detector_type": "sipm",
+            "channel": 9,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm58": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"pmt": {
+	    "detector_type": "pmt",
+	    "channel"      : 15,
+	    "module"       : "drs",
+	    "module_num"   : 0
+	}
+    },
+    "run_info": {
+        "number": "0"
+    }
+}

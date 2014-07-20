@@ -1,0 +1,33 @@
+{
+    "devices": {
+	"sipm23": {
+            "detector_type": "sipm",
+            "channel": 7,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm33": {
+            "detector_type": "sipm",
+            "channel": 6,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm43": {
+            "detector_type": "sipm",
+            "channel": 5,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"beamFlag": {
+	    "channel": 0,
+	    "module": "struckS",
+	    "module_num": 0
+	},
+	"laserFlag": {
+	    "channel": 1,
+	    "module": "struckS",
+	    "module_num": 0
+	}
+    }
+}
+	

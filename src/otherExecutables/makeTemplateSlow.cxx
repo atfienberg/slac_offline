@@ -214,7 +214,7 @@ traceSummary processTrace(unsigned short* trace){
   //find maximum
   int maxdex = 0;
   for(int i = 0; i < TRACELENGTH; ++i){
-    maxdex = trace[i] < trace[maxdex] ? i : maxdex;
+    maxdex = trace[i] > trace[maxdex] ? i : maxdex;
  }
  results.peakIndex = maxdex;
 

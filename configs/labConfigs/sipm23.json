@@ -1,0 +1,27 @@
+{
+    "digitizer_specs": {
+	"sample_rate"        :0.8,
+	"trace_length"       :1024,
+	"clip_cut_high"      :4080,
+	"clip_cut_low"       :0
+    },
+    
+    "fit_specs": {
+	"fit_type"          : "beam",
+	"fit"               : true,
+	"n_parameters"      :6,
+	"parameter_names"   : ["Time", "Delta T", "Device Ramp", "Device Decay", 
+			       "Source Ramp", "Source Decay"],	
+	"free_parameter"    : [true, false, false, false, false, false],
+	"parameter_guesses" : [400.0, 5 , 1.6, 3.2, 0.16, 2.56],
+	"parameter_steps"   : [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+	"parameter_mins"    : [398, 0,1, 2, 0.1, 1],
+	"parameter_maxes"   : [402, 20, 3, 5, 0.25, 4],
+	"fit_start"         :395,
+	"fit_length"        :20,
+	"base_fit_length"   :10,
+	"base_fit_buffer"   :10,
+	"separate_baseline_fit" : false,
+	"draw"              :false
+    }
+}

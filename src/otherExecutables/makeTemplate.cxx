@@ -226,6 +226,11 @@ traceSummary processTrace(unsigned short* trace){
   }
   
   //get the baseline 
+  if(trace[maxdex]<1000){
+    results.bad = true;
+    return results;
+  }
+
   if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){
     cout << "Baseline fit walked off the end of the trace!" << endl;
     results.bad = true;
