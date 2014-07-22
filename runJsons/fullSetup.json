@@ -48,12 +48,6 @@
             "module": "drs",
 	    "module_num": 0
 	},
-	"sipm36": {
-            "detector_type": "sipm",
-            "channel": 2,
-            "module": "struck",
-	    "module_num": 0
-        },
 	"sipm37": {
             "detector_type": "sipm",
             "channel": 2,
@@ -159,25 +153,10 @@
 	    "module_num": 0,
 	    "channel"   :0
 	},
-	"slowMonitor":{
-	    "module": "struckS",
-	    "channel": 2,
-	    "module_num":0
-	},
 	"paddle":{
 	    "module": "struckS",
 	    "channel": 7,
 	    "module_num":0
-	},
-	"pin1":{
-	    "module": "struckS",
-	    "channel": 4,
-	    "module_num":0
-	},
-	"paddle":{
-	    "module":"struck",
-	    "channel":3,
-	    "module_num":1
 	}
     }
 }
