@@ -1,0 +1,172 @@
+{
+    "devices": {
+        "sipm22": {
+            "detector_type": "sipm",
+            "channel": 3,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm23": {
+            "detector_type": "sipm",
+            "channel": 7,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm24": {
+            "detector_type": "sipm",
+            "channel": 11,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm25": {
+	    "detector_type": "sipm",
+	    "channel": 15,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm26": {
+            "detector_type": "sipm",
+            "channel": 3,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"sipm32": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm33": {
+            "detector_type": "sipm",
+            "channel": 6,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm34": {
+            "detector_type": "sipm",
+            "channel": 10,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm35": {
+	    "detector_type": "sipm",
+	    "channel": 14,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm36": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"sipm37": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"sipm42": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm43": {
+            "detector_type": "sipm",
+            "channel": 5,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm44": {
+            "detector_type": "sipm",
+            "channel": 9,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm45": {
+	    "detector_type": "sipm",
+	    "channel": 13,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm46": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"sipm47": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"sipm52": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm53": {
+            "detector_type": "sipm",
+            "channel": 4,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm54": {
+            "detector_type": "sipm",
+            "channel": 8,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"sipm55": {
+	    "detector_type": "sipm",
+	    "channel": 12,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"sipm56": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"sipm57": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"beamFlag": {
+	    "channel": 0,
+	    "module": "struckS",
+	    "module_num": 0
+	},
+	"laserFlag": {
+	    "channel": 1,
+	    "module": "struckS",
+	    "module_num": 0
+	},
+	"wireChamber": {
+	    "module": "adc",
+	    "module_num": 0,
+	    "channel"   :0
+	},
+	"slowMonitor":{
+	    "module": "struckS",
+	    "channel": 2,
+	    "module_num":0
+	},
+	"pin1":{
+	    "module": "struckS",
+	    "channel": 4,
+	    "module_num":0
+	},
+	"paddle":{
+	    "module":"struck",
+	    "channel":3,
+	    "module_num":1
+	}
+    }
+}

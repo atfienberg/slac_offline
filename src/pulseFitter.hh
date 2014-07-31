@@ -7,8 +7,8 @@ class for fitting traces
 #ifndef PULSEFIT
 #define PULSEFIT
 #include "TF1.h"
-#include "Math/WrappedMultiTF1.h"
-#include "Fit/Fitter.h"
+#include "Math/Functor.h"
+#include "Math/Minimizer.h"
 #include "TFile.h"
 #include "TSpline.h"
 #include <vector>
@@ -93,7 +93,7 @@ private:
     pulseFitFunction(char* config);
     ~pulseFitFunction();
     double operator() (double* x, double* p);
-    double operator() (const double* p);
+    double chi2Function(const double* p);
   
     //returns number of good data points in the range
     int setTrace(double* const trace);
@@ -121,6 +121,16 @@ private:
     double evalSum(int start, int length); 
     double findMax(int start, int length);
     double findMin(int start, int length);
+
+    int getNGoodPoints() const { 
+      int val = 0;
+      for (unsigned int i = 0; i < isGoodPoint.size(); ++i){
+	if (isGoodPoint[i]){
+	  val++;
+	}
+      }
+      return val;
+    }
   private:
     //private helper functions
     double evalPulse(double t, double t0);
@@ -167,7 +177,8 @@ private:
   };  
   pulseFitFunction func;
   
-  ROOT::Fit::Fitter f; //mws: more meaningful name
+  ROOT::Math::Minimizer* min; 
+  ROOT::Math::Functor functor;
 
   double fitPulse(double* const trace, double error, 
 		  bool isSingleFit);
@@ -191,7 +202,6 @@ private:
   std::vector<double> doubleTrace;
 
   TF1* waveform;
-  ROOT::Math::WrappedMultiTF1* wwaveform;
   
 };
 

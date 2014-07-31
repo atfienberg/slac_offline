@@ -14,6 +14,7 @@
 
 //ROOT includes
 #include "TApplication.h"
+#include "TROOT.h"
 #include "TH1.h"
 #include "TCanvas.h"
 #include "TFile.h"
@@ -23,9 +24,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+//open mp
+#include <omp.h>
+
 //project includes
 #include "pulseFitter.hh"
-
 #define TRACELENGTH 1024
 
 using namespace std;
@@ -46,8 +49,20 @@ typedef struct {
 } fitResults;
 
 typedef struct {
+  float cathodeX;
+  float cathodeY;
+  float anode;
+  bool good;
+} wireChamberResults;
+
+typedef UShort_t flagResults;
+
+typedef UShort_t adcResults;
+
+typedef struct {
   string name;
   string moduleType;
+  double calibrationConstant;
   int moduleNum;
   int channel;
   bool neg;
@@ -60,28 +75,29 @@ typedef struct{
   vector<deviceInfo> drsInfo;
 } runInfo;
 
-typedef struct{
-  double aAmpl;
-} struckSResults;
-typedef int adcResults;
-
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[4];
-  unsigned short trace[4][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[4];
+  UShort_t trace[4][1024];
 } sis_fast;
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[8];
-  unsigned short trace[8][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[8];
+  UShort_t trace[8][1024];
 } sis_slow;
 
 typedef struct {
-  unsigned long system_clock;
-  unsigned long device_clock[16];
-  unsigned short trace[16][1024];
+  ULong64_t system_clock;
+  ULong64_t device_clock[16];
+  UShort_t trace[16][1024];
 } drs;
+
+typedef struct {
+  ULong64_t system_clock;
+  ULong64_t device_clock[8];
+  UShort_t value[8];
+} adc;
 
 //read the run config file, store info in devInfo
 void readRunConfig(runInfo& rInfo, char* runConfig);
@@ -95,47 +111,55 @@ void crunch(const runInfo& rInfo,
 void initStruck(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& sr,
-		vector< unique_ptr<pulseFitter> >& sFitters);
+		vector< shared_ptr<pulseFitter> >& sFitters);
 
 //crunch through struck devices for a given event
-void crunchStruck(vector<sis_fast>& sFast, 
+void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& sr,
-		  vector< unique_ptr<pulseFitter> >& sFitters); 
+		  vector< vector<fitResults> >& sr,
+		  vector< vector<flagResults> > flResults, 
+		  vector< shared_ptr<pulseFitter> >& sFitters);
 
 //init for drs devices
 void initDRS(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& drsR,
-		vector< unique_ptr<pulseFitter> >& drsFitters);
+		vector< shared_ptr<pulseFitter> >& drsFitters);
 
 //crunch through drs devices for a given event
-void crunchDRS(vector<drs>& drs, 
-		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& drsR,
-		  vector< unique_ptr<pulseFitter> >& drsFitters); 
+void crunchDRS(vector< vector<drs> >& data, 
+	       const vector<deviceInfo>& devices,
+	       vector< vector<fitResults> >& drsR,
+	       vector< vector<flagResults> > flResults,
+	       vector< shared_ptr<pulseFitter> >& drsFitters);
 
 //init slow struck
 void initStruckS(TTree& outTree, 
 		 const vector<deviceInfo>& devices,
-		 vector<struckSResults>& srSlow,
-		 vector< unique_ptr<pulseFitter> >& slFitters); 
+		 vector<fitResults>& srSlow,
+		 vector<flagResults>& flR,
+		 vector< shared_ptr<pulseFitter> >& slFitters); 
 
 //crunch slow struck, includes beam and laser flags
-void crunchStruckS(sis_slow& s,
+void crunchStruckS(vector< sis_slow >& data,
 		   const vector<deviceInfo>& devices,
-		   vector<struckSResults>& srSlow,
-		   vector< unique_ptr<pulseFitter> >& slFitters); 
+		   vector< vector<fitResults> >& srSlow,
+		   vector< vector<flagResults> >& flResults,
+		   vector< shared_ptr<pulseFitter> >& slFitters);
+   
 
 //init adc
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
-	     vector<adcResults>& ar);
+	     vector<adcResults>& ar,
+	     wireChamberResults* wr);
 
 //crunch adc
-void crunchAdc(const unsigned short* adc,
+void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar);
+	       vector< vector<adcResults> >& ar,
+	       vector< wireChamberResults >& wr,
+	       vector< vector<flagResults> > flResults);
 
 //check if a file exists
 bool exists(const string& name) {
@@ -145,6 +169,7 @@ bool exists(const string& name) {
 
 int main(int argc, char* argv[]) {
   new TApplication("app", 0, nullptr);
+  gROOT->ProcessLine("gErrorIgnoreLevel = kWarning");
   
   if (argc<4){
     cout << "usage: ./slacAnalyzer [inputfile] [configfile] [outputfile]"
@@ -225,6 +250,12 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	thisDevice.name = subtree.first;
 	thisDevice.moduleType = subtree.second.get<string>("module");
 	thisDevice.channel = subtree.second.get<int>("channel");  
+	if(subtree.second.get_child_optional("calib_constant")){
+	  thisDevice.calibrationConstant = subtree.second.get<double>("calib_constant");
+	}
+	else{
+	  thisDevice.calibrationConstant = 1.0;
+	}
 	if(subtree.second.get_child_optional("polarity")){
 	  thisDevice.neg = true;
 	}
@@ -263,55 +294,164 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
   checkDuplicates(rInfo.struckSInfo);
   checkDuplicates(rInfo.adcInfo);
 }
-  
+    
 void crunch(const runInfo& rInfo, 
  	    TTree* inTree, 
 	    TTree& outTree){
  
   //initialization routines
 
+  //fast struck
   vector<sis_fast> sFast(2);
   inTree->SetBranchAddress("sis_fast_0", &sFast[0]);
   inTree->SetBranchAddress("sis_fast_1", &sFast[1]);
   vector<fitResults> sr(rInfo.struckInfo.size());
-  vector< unique_ptr<pulseFitter> > sFitters;
+  vector< shared_ptr<pulseFitter> > sFitters;
   initStruck(outTree, rInfo.struckInfo, sr, sFitters);
 
-  vector<drs> drs(2);
-  inTree->SetBranchAddress("caen_drs_0", &drs[0]);
-  inTree->SetBranchAddress("caen_drs_1", &drs[1]);
+  //drs
+  vector<drs> drsVec(2);
+  inTree->SetBranchAddress("caen_drs_0", &drsVec[0]);
+  inTree->SetBranchAddress("caen_drs_1", &drsVec[1]);
   vector<fitResults> drsR(rInfo.drsInfo.size());
-  vector< unique_ptr<pulseFitter> > drsFitters;
+  vector< shared_ptr<pulseFitter> > drsFitters;
   initDRS(outTree, rInfo.drsInfo, drsR, drsFitters);
 
+  //slow struck
   sis_slow s;
   inTree->SetBranchAddress("sis_slow_0",&s);
-  vector<struckSResults> srSlow(rInfo.struckSInfo.size());
-  vector< unique_ptr<pulseFitter> > slFitters;
-  initStruckS(outTree, rInfo.struckSInfo, srSlow, slFitters);
+  vector<fitResults> srSlow(rInfo.struckSInfo.size());;
+  vector<flagResults> flResults(rInfo.struckSInfo.size());
+  vector< shared_ptr<pulseFitter> > slFitters;
+  initStruckS(outTree, rInfo.struckSInfo, srSlow, flResults, slFitters);
 
-  vector<adcResults> ar;
-  unsigned short temp;
-  initAdc(outTree, rInfo.adcInfo, ar);
+  //adcs
+  vector<adc> adcs(2);
+  inTree->SetBranchAddress("caen_adc_0", &adcs[0]);
+  inTree->SetBranchAddress("caen_adc_1", &adcs[1]);
+  vector<adcResults> ar(rInfo.adcInfo.size());
+  wireChamberResults wr;
+  initAdc(outTree, rInfo.adcInfo, ar, &wr);
   
-  //loop over each event 
-  for(unsigned int i = 0; i < inTree->GetEntries(); ++i){
-    inTree->GetEntry(i);
-    crunchStruckS(s, rInfo.struckSInfo, srSlow, slFitters);
-    crunchStruck(sFast, rInfo.struckInfo, sr, sFitters);
-    crunchDRS(drs, rInfo.drsInfo, drsR, drsFitters);
-    crunchAdc(&temp, rInfo.adcInfo, ar); 
-    if( i % 100 == 0){
-      cout << i  << " processed" << endl;
+  //energy sum
+  double energySumDRS;
+  double energySumStruck;
+
+  outTree.Branch("energySumDRS", &energySumDRS,"energySumDRS/D");
+  outTree.Branch("energySumStruck", &energySumStruck,"energySumStruck/D");
+  
+
+  //end initialization routines
+  
+  //load-crunch-dump loop, processes data in chunks of BATCH_SIZE
+  unsigned int startEntry = 0;
+  unsigned int endEntry = BATCH_SIZE < inTree->GetEntries() 
+    ? BATCH_SIZE : inTree->GetEntries();
+  
+  while(startEntry!= inTree->GetEntries()){
+    unsigned int thisBatchSize = endEntry - startEntry;
+
+    //set up neccesary data structures
+    vector< vector<fitResults> > sis_slow_fit_res(thisBatchSize);
+    vector< sis_slow > sis_slow_data(thisBatchSize);
+    vector< vector<flagResults> > sis_slow_results(thisBatchSize);
+    vector< vector<sis_fast> > sis_fast_data(thisBatchSize);
+    vector< vector<fitResults> > sis_fast_results(thisBatchSize);
+    vector< vector<drs> > drs_data(thisBatchSize);
+    vector< vector<fitResults> > drs_results(thisBatchSize);
+    vector< vector<adc> > adc_data(thisBatchSize);
+    vector< vector<adcResults> > adc_results(thisBatchSize);
+    vector< wireChamberResults > wire_results(thisBatchSize);
+
+    //load data
+    for(unsigned int i = startEntry; i < endEntry; ++i){
+      inTree->GetEntry(i);
+      unsigned int dataIndex = i - startEntry;
+
+      sis_slow_results[dataIndex].resize(rInfo.struckSInfo.size());
+      sis_slow_fit_res[dataIndex].resize(rInfo.struckSInfo.size());
+      drs_results[dataIndex].resize(rInfo.drsInfo.size());
+      sis_fast_results[dataIndex].resize(rInfo.struckInfo.size());
+      adc_results[dataIndex].resize(rInfo.adcInfo.size());
+      sis_fast_data[dataIndex].resize(2);
+
+
+      sis_slow_data[dataIndex] = s;
+
+      for(unsigned int j = 0; j < sis_fast_data[dataIndex].size(); ++j){
+	sis_fast_data[dataIndex][j] = sFast[j];
+      }
+    
+      drs_data[dataIndex].resize(2);
+      for(unsigned int j = 0; j < drs_data[dataIndex].size(); ++j){
+	drs_data[dataIndex][j] = drsVec[j];
+      }
+    
+      adc_data[dataIndex].resize(2);
+      for(unsigned int j = 0; j < adc_data[dataIndex].size(); ++j){
+	adc_data[dataIndex][j] = adcs[j];
+      }
+    }    
+
+    //crunch data
+    crunchStruckS(sis_slow_data, rInfo.struckSInfo, sis_slow_fit_res, sis_slow_results,
+		  slFitters);
+    crunchStruck(sis_fast_data, rInfo.struckInfo, sis_fast_results, sis_slow_results, sFitters);
+    crunchDRS(drs_data, rInfo.drsInfo, drs_results, sis_slow_results, drsFitters);
+    crunchAdc(adc_data, rInfo.adcInfo, adc_results, wire_results, sis_slow_results);
+
+    //dump data
+    for(unsigned int i = 0; i < thisBatchSize; ++i){
+      sr = sis_fast_results[i];
+      drsR = drs_results[i];
+      wr = wire_results[i];
+      ar = adc_results[i];
+      srSlow = sis_slow_fit_res[i];
+      flResults = sis_slow_results[i];
+      bool beamFlag = flResults[0];
+      bool laserFlag = flResults[1];
+
+      energySumDRS = 0;
+      const char* sumSipms[8] = {"sipm23","sipm24",
+				 "sipm32", "sipm33","sipm34",
+				 "sipm42","sipm43","sipm44"};
+      if(beamFlag && !laserFlag){
+	for (unsigned int k = 0; k < drsR.size(); ++k ){
+	  for(int namedex = 0; namedex < 8; ++namedex){
+	    if(rInfo.drsInfo[k].name == sumSipms[namedex]){
+	      //if (drsR[k].energy > 0.01){
+	      //	cout << rInfo.drsInfo[k].name << endl;
+		energySumDRS += drsR[k].energy;
+		//}
+	    }
+	  }
+	}
+      }
+      // cout << "drs sum done." << endl;
+      energySumStruck = 0;
+      if(beamFlag && !laserFlag){
+	for (unsigned int k = 0; k < sr.size(); ++ k){
+	  if (sr[k].energy > 0.1 && rInfo.struckInfo[k].name!="paddle"){
+	    energySumStruck += sr[k].energy;
+	  }
+	}
+      }
+
+      outTree.Fill();
     }
-    outTree.Fill();
+    cout << "processed up to event " << endEntry << endl;
+ 
+
+    startEntry = endEntry;
+    endEntry = endEntry + BATCH_SIZE < inTree->GetEntries() 
+    ? endEntry + BATCH_SIZE  : inTree->GetEntries();
   }
 }
 
 void initTraceDevice(TTree& outTree, 
 		     const deviceInfo& device,
 		     fitResults* fr,
-		     vector< unique_ptr<pulseFitter> >& fitters){
+		     vector< shared_ptr<pulseFitter> >& fitters){
   
   //initialize output tree branch for this device
   outTree.Branch(device.name.c_str(), fr,
@@ -319,42 +459,38 @@ void initTraceDevice(TTree& outTree,
 	   CHOPPED_TRACE_LENGTH, CHOPPED_TRACE_LENGTH));    
  
   //intitalize fitter
-  string config = string("configs/") + device.name + string(".json");
+  string config = string("/home/newg2/Workspace/slac-test-ii/fitter/configs/") + device.name + string(".json");
    //beam configs
   if (exists(config)){
-    fitters.push_back(unique_ptr< pulseFitter >
+    fitters.push_back(shared_ptr< pulseFitter >
 		       (new pulseFitter((char*)config.c_str())));
   } 
 
   else{
     cout << config << " not found. "
 	 << "Using default config." << endl;
-    fitters.push_back(unique_ptr< pulseFitter >
+    fitters.push_back(shared_ptr< pulseFitter >
 		      (new pulseFitter()));
   }
     
   //laser configs
-  config = string("configs/") + device.name + string("Laser.json");
+  config = string("/home/newg2/Workspace/slac-test-ii/fitter/configs/") + device.name + string("Laser.json");
   if (exists(config)){
-    fitters.push_back(unique_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
+    fitters.push_back(shared_ptr< pulseFitter >(new pulseFitter((char*)config.c_str())));
   }
     
   else{
     cout << config << " not found. "
-	 << "Using default laser config." << endl;
-    fitters.push_back(unique_ptr< pulseFitter >
-		       (new pulseFitter((char*)"configs/.defaultLaserConfig.json")));
+	 << "Using beam config." << endl;
+    config = string("/home/newg2/Workspace/slac-test-ii/fitter/configs/") + device.name + string(".json");
+    fitters.push_back(fitters[fitters.size()-1]);
   } 
 }
 
-void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
-  //fill trace
-  for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
-    fr.trace[k] = 
-      trace[fitter.getFitStart()+k];
-  }
-
+void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceInfo& device){
   //get summary information from the trace
+  //cout << device.name << endl;
+
   int maxdex;
   if(!device.neg){
     maxdex = max_element(trace,trace+TRACELENGTH) - trace;
@@ -362,18 +498,36 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
   else{
     maxdex = min_element(trace, trace + TRACELENGTH) - trace;
   }
-
   //template
   if(fitter.getFitType() == string("template")){
-    fitter.setFitStart(maxdex - fitter.getFitLength()/2);
+    if(device.name == "pin2" || device.name == "pmt")
+      fitter.setFitStart(maxdex - fitter.getFitLength()/2);
+    else if(device.moduleType == string("drs"))
+      fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
+    else
+      fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
+   
   }
     
   //parametric
-  else{
+  else if (fitter.getFitType() == string("laser")){
     if(device.moduleType == string("drs"))
       fitter.setFitStart(maxdex - fitter.getFitLength() + 3);  
-    else if(device.moduleType == string("struck"))
+    else{
       fitter.setFitStart(maxdex - fitter.getFitLength() + 2);
+    }
+  }
+
+  else if (device.name == "slowMonitor"){
+    double top = 0;
+    double bottom = 0;
+    for(int i = 0; i < 20; ++i){
+      top = top + trace[i+300];
+      bottom= bottom + trace[i+200];
+    }
+    fr.baseline = bottom/20.0;
+    fr.energy = top/20.0 -fr.baseline;
+    return;
   }
 						       			       
   fr.aSum = fitter.getSum(trace,fitter.getFitStart(),fitter.getFitLength());
@@ -382,34 +536,35 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
 
   //set fit config based on maxdex
   //template
-  if(fitter.getFitType() == string("template")){
-    fitter.setParameterGuess(0,maxdex);
-    fitter.setParameterMin(0,maxdex-1);
-    fitter.setParameterMax(0,maxdex+1);
-  }
+  if(fitter.isFitConfigured()){
+    if(fitter.getFitType() == string("template")){
+      fitter.setParameterGuess(0,maxdex);
+      fitter.setParameterMin(0,maxdex-3);
+      fitter.setParameterMax(0,maxdex+3);
+    }
       
-  //parametric lsaer
-  else if (fitter.getFitType() == string("laser")){
-    if (device.moduleType == string("drs")){
-      fitter.setParameterGuess(0,maxdex-4);
-      fitter.setParameterMin(0,maxdex-6);
+    //parametric lsaer
+    else if (fitter.getFitType() == string("laser")){
+      if (device.moduleType == string("drs")){
+	fitter.setParameterGuess(0,maxdex-4);
+	fitter.setParameterMin(0,maxdex-6);
+	fitter.setParameterMax(0,maxdex-2);
+      }
+      else if (device.moduleType == string("struck")){
+	fitter.setParameterGuess(0,maxdex-2);
+	fitter.setParameterMin(0,maxdex-3);
+	fitter.setParameterMax(0,maxdex-1);
+      }
+    }
+    //parametric beam
+    else if (fitter.getFitType() == string("beam")){
+      fitter.setParameterGuess(0,maxdex-3);
+      fitter.setParameterMin(0,maxdex-4);
       fitter.setParameterMax(0,maxdex-2);
     }
-    else if (device.moduleType == string("struck")){
-      fitter.setParameterGuess(0,maxdex-2);
-      fitter.setParameterMin(0,maxdex-3);
-      fitter.setParameterMax(0,maxdex-1);
-    }
-  }
-  //parametric beam
-  else if (fitter.getFitType() == string("beam")){
-    fitter.setParameterGuess(0,maxdex-3);
-    fitter.setParameterMin(0,maxdex-4);
-    fitter.setParameterMax(0,maxdex-2);
-  }
 
-  //do the fits
-  if(fitter.isFitConfigured()){
+    //do the fits
+
     fitter.fitSingle(trace);
     
     if(fitter.getFitType() == string("template")){
@@ -423,14 +578,22 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
 	(1/(fitter.getParameter(5)+fitter.getParameter(4))*
 	 (fitter.getParameter(3)+fitter.getParameter(5)));
     }
+    fr.energy = fr.energy/device.calibrationConstant;
     fr.chi2 = fitter.getChi2();
     fr.time = fitter.getTime();
     fr.valid = fitter.wasValidFit();
 	
     //fill fitTrace
     fitter.fillFitTrace(fr.fitTrace,
-			 fitter.getFitStart(),
-			 CHOPPED_TRACE_LENGTH);     
+			fitter.getFitStart(),
+			CHOPPED_TRACE_LENGTH);     
+  }
+  
+
+  //fill trace
+  for( int k = 0; k < CHOPPED_TRACE_LENGTH; ++k){
+    fr.trace[k] = 
+      trace[fitter.getFitStart()+k];
   }
 
   if (fr.energy<0){
@@ -443,100 +606,277 @@ void fitDevice(unsigned short* trace, fitResults& fr, pulseFitter& fitter, const
 void initStruck(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& sr,
-		vector< unique_ptr<pulseFitter> >& sFitters){
+		vector< shared_ptr<pulseFitter> >& sFitters){
   //initialize each device
   for(unsigned int i = 0; i < devices.size(); ++i){
     initTraceDevice(outTree, devices[i], &sr[i], sFitters);
   }
 }
 
-void crunchStruck(vector<sis_fast>& sFast, 
+void filterTrace(UShort_t* trace, double* fTrace, int length){
+  int filterLength = length;
+  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
+    double runningSum = 0;
+    for(int j = 0; j < filterLength; ++j){
+      runningSum+=trace[i+j];
+    }
+    fTrace[i] = runningSum/filterLength;
+  }
+  for(int i = TRACELENGTH - filterLength; i < TRACELENGTH; ++i){
+    fTrace[i] = fTrace[i-1];
+  }
+} 
+
+void crunchStruck(vector< vector<sis_fast> >& data, 
 		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& sr,
-		  vector< unique_ptr<pulseFitter> >& sFitters){
+		  vector< vector<fitResults> >& sr,
+		  vector< vector<flagResults> > flResults,
+		  vector< shared_ptr<pulseFitter> >& sFitters){
   
   //temp
-  int laserRun = 0;
   
   //loop over each device 
+  #pragma omp parallel for firstprivate(flResults)
   for(unsigned int j = 0; j < devices.size(); ++j){
-    fitDevice(sFast[devices[j].moduleNum].trace[devices[j].channel],
-	      sr[j], 
-	      *sFitters[2*j+laserRun], devices[j]);
-  }   
+    for( unsigned int i = 0; i < data.size(); ++i){
+      UShort_t laserRun = flResults[i][1];
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel],fTrace,5);
+      fitDevice(fTrace,
+		sr[i][j], 
+		*sFitters[2*j+laserRun], devices[j]);
+    }   
+  }
 }
 
 void initDRS(TTree& outTree, 
 		const vector<deviceInfo>& devices,
 		vector<fitResults>& drsR,
-		vector< unique_ptr<pulseFitter> >& drsFitters){
+		vector< shared_ptr<pulseFitter> >& drsFitters){
   
   //initialize each device
   for(unsigned int i = 0; i < devices.size(); ++i){
     initTraceDevice(outTree, devices[i], &drsR[i], drsFitters);
   }
-}
+} 
 
-const int filterLength = 10;
-void filterTrace(unsigned short* trace){
-  for(int i = 0; i < TRACELENGTH-filterLength; ++i){
-    int runningSum = 0;
-    for(int j = 0; j < filterLength; ++j){
-      runningSum+=trace[i+j];
-    }
-    trace[i] = runningSum/filterLength;
-  }
-}  
-
-void crunchDRS(vector<drs>& drs, 
-		  const vector<deviceInfo>& devices,
-		  vector<fitResults>& drsR,
-		  vector< unique_ptr<pulseFitter> >& drsFitters){
+void crunchDRS(vector< vector<drs> >& data, 
+	       const vector<deviceInfo>& devices,
+	       vector< vector<fitResults> >& drsR,
+	       vector< vector<flagResults> > flResults,
+	       vector< shared_ptr<pulseFitter> >& drsFitters){
   
   //temp
-  int laserRun = 0;
 
   //loop over each device 
+  #pragma omp parallel for firstprivate(flResults)
   for(unsigned int j = 0; j < devices.size(); ++j){
-    filterTrace(drs[devices[j].moduleNum].trace[devices[j].channel]);
-    fitDevice(drs[devices[j].moduleNum].trace[devices[j].channel],
-	      drsR[j], 
-	      *drsFitters[2*j+laserRun], devices[j]);
-  }   
-
+    for(unsigned int i = 0; i < data.size(); ++i){
+      UShort_t laserRun = flResults[i][1];
+      double fTrace[TRACELENGTH];
+      if(devices[j].name == "pmt"){
+	filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 1);  
+      }
+      else{
+	filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 10);  
+      }
+      fitDevice(fTrace,
+		drsR[i][j], 
+		*drsFitters[2*j+laserRun], devices[j]);
+    }
+  }
 }
 
-void initStruckS(TTree& outTree, 
+/*void initStruckS(TTree& outTree, 
 		 const vector<deviceInfo>& devices,
 		 vector<struckSResults>& srSlow,
-		 vector< unique_ptr<pulseFitter> >& slFitters){
+		 vector< shared_ptr<pulseFitter> >& slFitters){
   
   for (unsigned int i = 0; i < devices.size(); ++i){
     outTree.Branch(devices[i].name.c_str(), &srSlow[i], "aAmpl/D");
   }
+  }*/
+
+
+//beam flag MUST come first in config file
+//fix to work with arbitrary order of things in runjson
+void initStruckS(TTree& outTree, 
+		 const vector<deviceInfo>& devices,
+		 vector<fitResults>& srSlow,
+		 vector<flagResults>& flR,
+		 vector< shared_ptr<pulseFitter> >& slFitters){
+  
+  int flagIndex = 0;
+  for (unsigned int i = 0; i < devices.size(); ++i){
+    if(devices[i].name == "beamFlag" || devices[i].name == "laserFlag"){
+      outTree.Branch(devices[i].name.c_str(), &flR[flagIndex], "flag/O");
+      ++flagIndex;
+      slFitters.push_back(NULL);
+      slFitters.push_back(NULL);
+    }
+    else{
+      initTraceDevice(outTree, devices[i], &srSlow[i], slFitters);
+   }
+  }
 }
 
 //completely temporary implementation
-void crunchStruckS(sis_slow& s,
+/*void crunchStruckS(sis_slow& s,
 		   const vector<deviceInfo>& devices,
 		   vector<struckSResults>& srSlow,
-		   vector< unique_ptr<pulseFitter> >& slFitters){
+		   vector< shared_ptr<pulseFitter> >& slFitters){
   if(devices.size()>0){
     double baseline = accumulate(s.trace[4],s.trace[4]+20,0)/20;
     double ampl = *max_element(s.trace[4],s.trace[4]+TRACELENGTH)-baseline;
     srSlow[0].aAmpl = ampl;
   }
 }
+*/
+ 
+
+
+//my automatic indenting isn't working here for some reason...
+void crunchStruckS(vector< sis_slow >& data,
+		   const vector<deviceInfo>& devices,
+		   vector< vector<fitResults> >& srSlow,
+		   vector< vector<flagResults> >& flResults,
+		   vector< shared_ptr<pulseFitter> >& slFitters){
   
+  #pragma omp parallel for
+  for(unsigned int j = 0; j < devices.size(); ++j){
+
+    for(unsigned int i = 0; i < data.size(); ++i){
+      if((devices[j].name == "beamFlag") || (devices[j].name == "laserFlag")){ 
+      UShort_t max = *max_element(data[i].trace[devices[j].channel], 
+				    data[i].trace[devices[j].channel]+TRACELENGTH);
+      if (max > 32000){
+	flResults[i][j] = 1;
+      }
+      else{
+	flResults[i][j] = 0;
+      }
+}
+  else{
+    if(devices[j].name == "slowMonitor"){
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i].trace[devices[j].channel], fTrace, 1);
+      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
+      
+    }
+    else{
+      double fTrace[TRACELENGTH];
+      filterTrace(data[i].trace[devices[j].channel], fTrace, 5);
+      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
+}
+	
+}
+}
+}
+}
 
 void initAdc(TTree& outTree,
 	     const vector<deviceInfo>& devices,
-	     vector<adcResults>& ar){
-  //stub
+	     vector<adcResults>& ar,
+	     wireChamberResults* wr){
+  for (unsigned int i = 0; i < devices.size(); ++i){
+    
+    if ( devices[i].name == "wireChamber" ){
+      outTree.Branch(devices[i].name.c_str(), wr, 
+		     "cathode_x/F:cathode_y/F:anode/F:good/O");
+    }
+    
+    else{
+      outTree.Branch(devices[i].name.c_str(), &ar[i], "value/s");
+    }
+    
+  } 
+  
 }
 
-void crunchAdc(const unsigned short* adc,
+
+//WIRE CHAMBER FUNCTIONS FROM PETE 
+
+float compute_cathode_position(UShort_t c[]){ // center of gravity approach
+
+  // the array provided needs to be length six and have the channels
+  // mapped so that the c[0] corresponds to the -20 position and c[5] corresponds to 20
+
+    float cathode_position = 0;
+    float cathode_sum = 0;
+    for(int i=0;i<6;i++){
+      if(c[i]<4000.){
+	cathode_position += c[i]*(-20.+(i)*8.); // 20 and 8 are mm and come from the physical parameters of the device
+	cathode_sum += c[i];
+      }
+    }
+    cathode_position /= cathode_sum;
+
+    if(cathode_sum>500)   return cathode_position;
+    else {
+      return -30;
+    }
+} // end compute_cathode_position
+
+float compute_anode_position(UShort_t a1, UShort_t a2){ // charge division approach
+
+  if(a1>600.&&a2>600.&&a1<4000.&&a2<4000.){ // cuts for valid signals
+    // anode 1 calib 260 // anode 2 calib 350
+    float cal = 350./260.; // scale to make a1 signal same size as a2
+    float L = 21.; //half length scale of device in mm
+    float anode_position = L * (cal*a1-a2)/(cal*a1+a2);
+    return anode_position;
+  } 
+  else {
+    return -30;
+  }
+} // end compute_anode_position
+
+
+//END FUNCTIONS FROM PETE
+
+//implementing pete's wire chamber analysis code
+void computeWireChamber(const UShort_t* adc1,
+			const UShort_t* adc2,
+			wireChamberResults& wr){
+
+  wr.good = true;
+
+  UShort_t cathodeXVals[6] = {adc1[7], adc1[6], adc1[5],
+			      adc1[4], adc1[3], adc1[2]};
+  
+  UShort_t cathodeYVals[6] = {adc2[7], adc2[6], adc2[5],
+			      adc2[4], adc2[3], adc2[2]};
+  
+  wr.anode = compute_anode_position(adc1[1], adc1[0]);
+  wr.cathodeX = compute_cathode_position(cathodeXVals);
+  wr.cathodeY = compute_cathode_position(cathodeYVals);
+
+  if(wr.anode == -30 || wr.cathodeX == -30 || wr.cathodeY == -30){
+    wr.good = false;
+  }
+}
+
+void crunchAdc(const vector< vector<adc> >& adc_data,
 	       const vector<deviceInfo>& devices,
-	       vector<adcResults>& ar){
-  //stub
+	       vector< vector<adcResults> >& ar,
+	       vector< wireChamberResults >& wr,
+	       vector< vector<flagResults> > flResults){
+
+  #pragma omp parallel for firstprivate(flResults)
+  for(unsigned int i = 0; i < devices.size(); ++i){
+    for(unsigned int j = 0; j < adc_data.size(); ++j){
+      if (devices[i].name == "wireChamber"){
+	if(flResults[i][0]==1){
+	  computeWireChamber(adc_data[j][0].value, adc_data[j][1].value, wr[j]);
+	}
+	else{
+	  wr[i].good = false;
+        }
+      }
+   
+      else{
+	ar[j][i] = adc_data[j][devices[i].moduleNum].value[devices[i].channel];
+      }
+    }
+  }
 }

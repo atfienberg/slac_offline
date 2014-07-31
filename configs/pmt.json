@@ -8,9 +8,9 @@
   
   "fit_specs": {
     "fit_type"          : "template",
-    "template_file"     : "templates/pmtFilterTemplate.root",
-    "template_buffer"   : 40,
-    "template_length"   :100,
+    "template_file"     : "templates/pmtTemplate.root",
+    "template_buffer"   : 20,
+    "template_length"   :40,
     "fit"               : true,
     "n_parameters"      :    2,	 	
     "parameter_names"   : ["time", "Delta T"],
@@ -20,10 +20,10 @@
     "parameter_mins"    : [365, 0.1],
     "parameter_maxes"   : [372, 20],
     "fit_start"         :355,
-    "fit_length"        :50,
+    "fit_length"        :10,
     "base_fit_length"   :40,
     "base_fit_buffer"   :40,
-    "separate_baseline_fit"   : false,
-    "draw"              :true
+    "separate_baseline_fit"   : true,
+    "draw"              :false
     }
 }
