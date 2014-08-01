@@ -1,0 +1,15 @@
+{
+    "devices": {
+	"beamFlag": {
+	    "channel": 0,
+	    "module": "struckS",
+	    "module_num": 0
+	},
+	"laserFlag": {
+	    "channel": 1,
+	    "module": "struckS",
+	    "module_num": 0
+	}
+    }
+}
+	

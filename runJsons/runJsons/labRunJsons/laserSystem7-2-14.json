@@ -1,0 +1,30 @@
+{
+    "devices": {
+        "lensSipm1": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"noLensSipm1": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"pmt": {
+            "detector_type": "pmt",
+            "channel": 1,
+            "module": "struck",
+	    "polarity": "neg",
+	    "module_num": 1
+        },
+	"slowMonitor":{
+	    "module": "struckS",
+	    "channel": 4
+	}
+    },
+    "run_info": {
+        "number": "1"
+    }
+}

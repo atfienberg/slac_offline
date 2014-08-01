@@ -500,10 +500,10 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
   }
   //template
   if(fitter.getFitType() == string("template")){
-    if(device.moduleType == string("drs"))
-      fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
-    else if(device.name == "pin")
+    if(device.name == "pin2" || device.name == "pmt")
       fitter.setFitStart(maxdex - fitter.getFitLength()/2);
+    else if(device.moduleType == string("drs"))
+      fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
     else
       fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
    
@@ -674,7 +674,12 @@ void crunchDRS(vector< vector<drs> >& data,
     for(unsigned int i = 0; i < data.size(); ++i){
       UShort_t laserRun = flResults[i][1];
       double fTrace[TRACELENGTH];
-      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 10);
+      if(devices[j].name == "pmt"){
+	filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 1);  
+      }
+      else{
+	filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 10);  
+      }
       fitDevice(fTrace,
 		drsR[i][j], 
 		*drsFitters[2*j+laserRun], devices[j]);

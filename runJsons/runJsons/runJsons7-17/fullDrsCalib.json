@@ -1,0 +1,100 @@
+{
+    "devices": {
+        "drs0": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs1": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs2": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs3": {
+            "detector_type": "sipm",
+            "channel": 3,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs4": {
+            "detector_type": "sipm",
+            "channel": 4,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs5": {
+            "detector_type": "sipm",
+            "channel": 5,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs6": {
+            "detector_type": "sipm",
+            "channel": 6,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs7": {
+            "detector_type": "sipm",
+            "channel": 7,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs8": {
+            "detector_type": "sipm",
+            "channel": 8,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs9": {
+            "detector_type": "sipm",
+            "channel": 9,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs10": {
+            "detector_type": "sipm",
+            "channel": 10,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs11": {
+            "detector_type": "sipm",
+            "channel": 11,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs12": {
+            "detector_type": "sipm",
+            "channel": 12,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs13": {
+            "detector_type": "sipm",
+            "channel": 13,
+            "module": "drs",
+	    "module_num": 0
+	},
+	"drs14": {
+            "detector_type": "sipm",
+            "channel": 14,
+            "module": "drs",
+	    "module_num": 0
+	},
+ 	"drs15": {
+            "detector_type": "sipm",
+            "channel": 15,
+            "module": "drs",
+	    "module_num": 0
+	}
+    }
+}

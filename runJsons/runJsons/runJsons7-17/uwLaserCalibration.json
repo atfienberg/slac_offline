@@ -1,0 +1,31 @@
+{
+    "devices": {
+        "sipm1": {
+            "detector_type": "sipm",
+            "channel": 3,
+            "module": "struck",
+	    "module_num": 1
+        },
+	 "sipm2": {
+            "detector_type": "sipm",
+            "channel": 2,
+            "module": "struck",
+	    "module_num": 1
+        },
+	"sipm3": {
+            "detector_type": "sipm",
+            "channel": 1,
+            "module": "struck",
+	    "module_num": 0
+        },
+	"sipm4": {
+            "detector_type": "sipm",
+            "channel": 0,
+            "module": "struck",
+	    "module_num": 0
+	}
+    },
+    "run_info": {
+        "number": "0"
+    }
+}
