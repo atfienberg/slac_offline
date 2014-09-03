@@ -491,6 +491,11 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
   //get summary information from the trace
   //cout << device.name << endl;
 
+#ifdef SEQUENTIAL
+  cout << device.name << endl;
+  cout << "=================" << endl;
+#endif
+
   int maxdex;
   if(!device.neg){
     maxdex = max_element(trace,trace+TRACELENGTH) - trace;
@@ -502,11 +507,9 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
   if(fitter.getFitType() == string("template")){
     if(device.name == "pin2" || device.name == "pmt")
       fitter.setFitStart(maxdex - fitter.getFitLength()/2);
-    else if(device.moduleType == string("drs"))
-      fitter.setFitStart(maxdex - 4*fitter.getFitLength()/5);  
-    else
-      fitter.setFitStart(maxdex - 3*fitter.getFitLength()/4);
-   
+    else 
+      //      fitter.setFitStart(maxdex - 2*fitter.getFitLength()/3);  
+      fitter.setFitStart(maxdex - fitter.getFitLength()/2);  
   }
     
   //parametric
@@ -568,7 +571,13 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
     fitter.fitSingle(trace);
     
     if(fitter.getFitType() == string("template")){
-      fr.energy = fitter.getScale();
+      //control statements temporary hack for using old configs not set up for stretchy template
+      if(fitter.getParameter(2)!=0){
+	fr.energy = fitter.getScale()*fitter.getParameter(2);
+      }
+      else{
+	fr.energy = fitter.getScale();
+      }
     }
     else if(fitter.getFitType() == string("laser")){
       fr.energy = 2.0*fitter.getScale();
@@ -665,8 +674,6 @@ void crunchDRS(vector< vector<drs> >& data,
 	       vector< vector<fitResults> >& drsR,
 	       vector< vector<flagResults> > flResults,
 	       vector< shared_ptr<pulseFitter> >& drsFitters){
-  
-  //temp
 
   //loop over each device 
   #pragma omp parallel for firstprivate(flResults)
@@ -686,17 +693,6 @@ void crunchDRS(vector< vector<drs> >& data,
     }
   }
 }
-
-/*void initStruckS(TTree& outTree, 
-		 const vector<deviceInfo>& devices,
-		 vector<struckSResults>& srSlow,
-		 vector< shared_ptr<pulseFitter> >& slFitters){
-  
-  for (unsigned int i = 0; i < devices.size(); ++i){
-    outTree.Branch(devices[i].name.c_str(), &srSlow[i], "aAmpl/D");
-  }
-  }*/
-
 
 //beam flag MUST come first in config file
 //fix to work with arbitrary order of things in runjson
@@ -747,31 +743,31 @@ void crunchStruckS(vector< sis_slow >& data,
 
     for(unsigned int i = 0; i < data.size(); ++i){
       if((devices[j].name == "beamFlag") || (devices[j].name == "laserFlag")){ 
-      UShort_t max = *max_element(data[i].trace[devices[j].channel], 
+	UShort_t max = *max_element(data[i].trace[devices[j].channel], 
 				    data[i].trace[devices[j].channel]+TRACELENGTH);
-      if (max > 32000){
-	flResults[i][j] = 1;
+	if (max > 32000){
+	  flResults[i][j] = 1;
+	}
+	else{
+	  flResults[i][j] = 0;
+	}
       }
       else{
-	flResults[i][j] = 0;
-      }
-}
-  else{
-    if(devices[j].name == "slowMonitor"){
-      double fTrace[TRACELENGTH];
-      filterTrace(data[i].trace[devices[j].channel], fTrace, 1);
-      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
+	if(devices[j].name == "slowMonitor"){
+	  double fTrace[TRACELENGTH];
+	  filterTrace(data[i].trace[devices[j].channel], fTrace, 1);
+	  fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
       
-    }
-    else{
-      double fTrace[TRACELENGTH];
-      filterTrace(data[i].trace[devices[j].channel], fTrace, 5);
-      fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
-}
+	}
+	else{
+	  double fTrace[TRACELENGTH];
+	  filterTrace(data[i].trace[devices[j].channel], fTrace, 5);
+	  fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
+	}
 	
-}
-}
-}
+      }
+    }
+  }
 }
 
 void initAdc(TTree& outTree,

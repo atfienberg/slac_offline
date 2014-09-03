@@ -22,7 +22,7 @@ using namespace std;
 
 const int TEMPLATELENGTH = 100;
 const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 1;
+const int NTIMEBINS = 5;
 const int DEFAULTDRSCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
@@ -47,7 +47,7 @@ typedef struct traceSummary{
 traceSummary processTrace(unsigned short* trace);
 double* correctTrace(unsigned short* trace, traceSummary summary, double meanIntegral);
 
-const int filterLength = 10;
+const int filterLength = 1;
 void filterTrace(unsigned short* trace){
   for(int i = 0; i < TRACELENGTH-filterLength; ++i){
     int runningSum = 0;

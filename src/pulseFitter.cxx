@@ -768,8 +768,9 @@ double pulseFitter::pulseFitFunction::laserSource(double t, double t0){
 //lpg[2] is strech factor
 double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
   if((1/lpg[2])*(t-t0) > -1*templateBuffer && 
-     (1/lpg[2])*(t-t0) < (templateLength-templateBuffer)) 
+     (1/lpg[2])*(t-t0) < (templateLength-templateBuffer)) {
     return templateSpline->Eval( (1/lpg[2]) * (t - t0));
+  }
   else
     return 0;
 }
