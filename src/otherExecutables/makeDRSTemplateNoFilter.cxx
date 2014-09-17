@@ -22,11 +22,11 @@ using namespace std;
 
 const int TEMPLATELENGTH = 100;
 const int NBINSPSEUDOTIME = 500;
-const int NTIMEBINS = 5;
+const int NTIMEBINS = 1;
 const int DEFAULTDRSCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
-const int BUFFERZONE = 40;
+const int BUFFERZONE = 20;
 
 typedef struct {
   unsigned long system_clock;
@@ -162,18 +162,18 @@ int main(int argc, char* argv[]) {
 		  xBinHist->GetMean()+xBinHist->GetRMS()*3);
     // errorGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
     // 			xBinHist->GetRMS());
-    // masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS,
+    //masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS-BUFFERZONE-.5,
     // 			 xBinHist->GetMean());
     double mean = xBinHist->GetFunction("gaus")->GetParameter(1);
     double sig = xBinHist->GetFunction("gaus")->GetParameter(2);
     errorGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS-BUFFERZONE-.5,
 			sig);
     masterGraph.SetPoint(i,static_cast<float>(i)/NTIMEBINS-BUFFERZONE-.5,
-			 mean);
+    			 mean);
     masterGraph.SetPointError(i,0,
 			      sig);
     // errorVsMean.SetPoint(i,xBinHist->GetMean(),
-    // 			 xBinHist->GetRMS());
+    //			 xBinHist->GetRMS());
     errorVsMean.SetPoint(i,mean,sig);
    delete xBinHist;
   }
@@ -225,10 +225,15 @@ traceSummary processTrace(unsigned short* trace){
 				     (trace[maxdex+1]-trace[maxdex]));
   }
 
-  /*if(trace[maxdex]>3200||trace[maxdex]<2800){
+  if(maxdex<400){
     results.bad = true;
     return results;
-    }*/
+  }
+
+  if(trace[maxdex]>1000||trace[maxdex]<800){
+    results.bad = true;
+    return results;
+  }
   
   //get the baseline 
   if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){

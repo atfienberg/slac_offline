@@ -40,6 +40,7 @@ typedef struct {
   double trace[CHOPPED_TRACE_LENGTH];
   double fitTrace[CHOPPED_TRACE_LENGTH];
   double energy;
+  double stretch;
   double aSum;
   double baseline;
   double time;
@@ -455,7 +456,7 @@ void initTraceDevice(TTree& outTree,
   
   //initialize output tree branch for this device
   outTree.Branch(device.name.c_str(), fr,
-      Form("trace[%i]/D:fitTrace[%i]/D:energy/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O",
+      Form("trace[%i]/D:fitTrace[%i]/D:energy/D:stretch/D:aSum/D:baseline/D:time/D:aAmpl/D:chi2/D:valid/O",
 	   CHOPPED_TRACE_LENGTH, CHOPPED_TRACE_LENGTH));    
  
   //intitalize fitter
@@ -574,6 +575,7 @@ void fitDevice(double* trace, fitResults& fr, pulseFitter& fitter, const deviceI
       //control statements temporary hack for using old configs not set up for stretchy template
       if(fitter.getParameter(2)!=0){
 	fr.energy = fitter.getScale()*fitter.getParameter(2);
+	fr.stretch = fitter.getParameter(2);
       }
       else{
 	fr.energy = fitter.getScale();

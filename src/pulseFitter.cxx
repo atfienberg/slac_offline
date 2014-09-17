@@ -262,18 +262,19 @@ double pulseFitter::fitPulse(double* const trace, double error,
     
     else if (i == 1){ 
       if(isSingleFit){
-	//	f.Config().ParSettings(1).Set("Delta T",0);
 	min->SetFixedVariable(1,"Delta T", 0);
       }//fix delta t to 0 if it's a single fit
 
-      /*else{
-	f.Config().ParSettings(i).Release();
-	f.Config().ParSettings(i).Set(parNames[i].c_str(),
-				      initialParGuesses[i],
-				      parSteps[i],
-				      parMins[i],
-				      parMaxes[i]);
-				      }//configure delta t if it's a double fit*/
+      else{
+	//f.Config().ParSettings(i).Release();
+	min->ReleaseVariable(i);
+	min->SetLimitedVariable(i,
+				parNames[i].c_str(),
+				initialParGuesses[i],
+				parSteps[i],
+				parMins[i],
+				parMaxes[i]);
+      }//configure delta t if it's a double fit*/
     }
     
     else{
@@ -313,13 +314,17 @@ double pulseFitter::fitPulse(double* const trace, double error,
       cout << "Function Max: " << getFunctionMaximum() - getBaseline()<< endl;
       cout << "Fresh Max: " << getMax(trace, getFitStart(), getFitLength()) << endl;
       cout << "Max index: " << max_element(trace,trace+1024)-trace<< endl;
+      cout << "chi2: " << getChi2() << endl;
     }
     
     if(!isSingleFit){
       cout << "Scale: " << getScale() << endl;
+      cout << "Time: " << getTime() << endl;
+      cout << "Delta t: " << getParameter(1) << endl;
       cout << "Baseline: " << getBaseline() << endl;
       cout << "Ratio: " << getRatio() << endl;
-      cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
+      cout << "chi2: " << getChi2() << endl;
+      //cout << "Integral: " << getIntegral(0,func.getTraceLength()) << endl;
       cout << "Analogue sum: " << getSum(trace, getFitStart(), getFitLength()+20) << endl;
     }
     TCanvas* c1 = new TCanvas("c1", "c1",0,0,1800,900);
