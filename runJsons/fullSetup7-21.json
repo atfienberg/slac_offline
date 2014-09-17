@@ -48,6 +48,12 @@
             "module": "drs",
 	    "module_num": 0
 	},
+	"sipm36": {
+	    "detector_type": "sipm",
+	    "channel": 2,
+            "module": "struck",
+	    "module_num": 0
+	},
 	"sipm37": {
             "detector_type": "sipm",
             "channel": 2,
@@ -147,11 +153,6 @@
 	    "channel": 1,
 	    "module": "struckS",
 	    "module_num": 0
-	},
-	"wireChamber": {
-	    "module": "adc",
-	    "module_num": 0,
-	    "channel"   :0
 	}
     }
 }

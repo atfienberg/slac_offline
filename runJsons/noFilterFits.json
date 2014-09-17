@@ -1,0 +1,26 @@
+{
+    "devices": {
+	"drsNoFilter": {
+            "detector_type": "sipm",
+            "channel": 9,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"drs2NoFilter": {
+            "detector_type": "sipm",
+            "channel": 13,
+            "module": "drs",
+	    "module_num": 0
+        },
+	"beamFlag": {
+	    "channel": 0,
+	    "module": "struckS",
+	    "module_num": 0
+	},
+	"laserFlag": {
+	    "channel": 1,
+	    "module": "struckS",
+	    "module_num": 0
+	}
+    }
+}

@@ -1,11 +1,5 @@
 {
     "devices": {
-        "sipm22": {
-            "detector_type": "sipm",
-            "channel": 3,
-            "module": "drs",
-	    "module_num": 0
-        },
 	"sipm23": {
             "detector_type": "sipm",
             "channel": 7,
@@ -46,6 +40,12 @@
 	    "detector_type": "sipm",
 	    "channel": 14,
             "module": "drs",
+	    "module_num": 0
+	},
+	"sipm36": {
+	    "detector_type": "sipm",
+	    "channel": 2,
+            "module": "struck",
 	    "module_num": 0
 	},
 	"sipm37": {
@@ -148,10 +148,11 @@
 	    "module": "struckS",
 	    "module_num": 0
 	},
-	"wireChamber": {
-	    "module": "adc",
-	    "module_num": 0,
-	    "channel"   :0
-	}
+	"pin2": {
+            "detector_type": "pin diode",
+            "channel": 3,
+            "module": "struck",
+	    "module_num": 1
+        }	
     }
 }
