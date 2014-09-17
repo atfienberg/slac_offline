@@ -17,5 +17,5 @@ if sys.argv[2] < sys.argv[1]:
 
 with open("../fit_script.sh", "w") as file:
     for i in xrange(int(sys.argv[1]), int(sys.argv[2])):
-        file.write("./slacAnalyzer datafiles/run_%05i.root  runJsons/setup7-18.json crunchedFiles/run_%05i_crunched.root\n" % (i, i))
+        file.write("./slacAnalyzer datafiles/run_%05i.root  runJsons/fullSetup7-24.json ../crunchedWithStretch/run_%05i_crunched.root\n" % (i, i))
 
