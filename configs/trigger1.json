@@ -8,9 +8,9 @@
   
   "fit_specs": {
       "fit_type"          : "template",
-      "template_file"     : "templates/sipm1Template.root",
-      "template_buffer"   : 40,
-      "template_length"   :100,
+      "template_file"     : "templates/triggerTemplate.root",
+      "template_buffer"   : 50,
+      "template_length"   :300,
       "fit"               : true,
       "n_parameters"      :    3,	 	
       "parameter_names"   : ["time", "Delta T", "stretch"],
@@ -27,3 +27,4 @@
       "draw"              :false
   }
 }
+

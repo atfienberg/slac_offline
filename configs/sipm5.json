@@ -8,7 +8,7 @@
   
   "fit_specs": {
       "fit_type"          : "template",
-      "template_file"     : "templates/sipm1Template.root",
+      "template_file"     : "templates/sipm5Template.root",
       "template_buffer"   : 40,
       "template_length"   :100,
       "fit"               : true,

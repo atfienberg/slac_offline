@@ -16,15 +16,15 @@ SOURCES = $(wildcard src/*.cxx) #Source Code Files
 OBJECTS = objects/pulseFitter.o
 ROOTLIBS = $(shell root-config --libs) 
 ROOT_DICT = objects/root_dict.o
-TARGET =  slacAnalyzer
+TARGET =  labAnalyzer
 
-$(TARGET): $(OBJECTS) src/slacAnalyzer.cxx
+$(TARGET): $(OBJECTS) src/labAnalyzer.cxx
 	@echo Building and Linking $@
 	$(CC) $(CFLAGS) -fopenmp -DBATCH_SIZE=1000 $^ -o $@ $(ROOTLIBS)
 
-slacAnalyzerSequential: $(OBJECTS) src/slacAnalyzer.cxx 
+labAnalyzerSequential: $(OBJECTS) src/labAnalyzer.cxx 
 	@echo Building and Linking $@
-	$(CC) -DBATCH_SIZE=1 $(CFLAGS) $^ -o $@ $(ROOTLIBS)
+	$(CC) -DBATCH_SIZE=1 -DSEQUENTIAL $(CFLAGS) $^ -o $@ $(ROOTLIBS)
 
 %: src/otherExecutables/%.cxx objects/pulseFitter.o
 	@echo Linking and building $@

@@ -20,18 +20,18 @@ code for generating "fuzzy templates" based on digitized datasets
 #include "time.h"
 using namespace std;
 
-const int TEMPLATELENGTH = 100;
+const int TEMPLATELENGTH = 300;
 const int NBINSPSEUDOTIME = 500;
 const int NTIMEBINS = 1;
 const int DEFAULTDRSCHANNEL = 0;
 const int TRACELENGTH = 1024;
 const int BASELINEFITLENGTH = 50;
-const int BUFFERZONE = 20;
+const int BUFFERZONE = 50;
 
 typedef struct {
   unsigned long system_clock;
-  unsigned long device_clock[16];
-  unsigned short trace[16][1024];
+  unsigned long device_clock[18];
+  unsigned short trace[18][1024];
 } drs;
 
 typedef struct traceSummary{
@@ -225,15 +225,15 @@ traceSummary processTrace(unsigned short* trace){
 				     (trace[maxdex+1]-trace[maxdex]));
   }
 
-  if(maxdex<400){
+  /*  if(maxdex<400){
     results.bad = true;
     return results;
-  }
+    }*/
 
-  if(trace[maxdex]>1000||trace[maxdex]<800){
+  /*  if(trace[maxdex]>1000||trace[maxdex]<800){
     results.bad = true;
     return results;
-  }
+    }*/
   
   //get the baseline 
   if(maxdex-BASELINEFITLENGTH-BUFFERZONE<0){
@@ -258,7 +258,8 @@ traceSummary processTrace(unsigned short* trace){
   }
   results.integral = runningIntegral;
 
-  results.normalizedAmpl = (trace[maxdex]-results.baseline)/results.integral;
+
+  results.normalizedAmpl = (trace[maxdex+100]-results.baseline)/results.integral;
 
   return results;
 }

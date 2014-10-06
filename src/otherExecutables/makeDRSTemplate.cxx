@@ -30,8 +30,8 @@ const int BUFFERZONE = 40;
 
 typedef struct {
   unsigned long system_clock;
-  unsigned long device_clock[16];
-  unsigned short trace[16][1024];
+  unsigned long device_clock[18];
+  unsigned short trace[18][1024];
 } drs;
 
 typedef struct traceSummary{
