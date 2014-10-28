@@ -66,6 +66,7 @@ typedef struct {
   double calibrationConstant;
   int moduleNum;
   int channel;
+  int filterLength;
   bool neg;
 } deviceInfo;
 
@@ -256,6 +257,15 @@ void readRunConfig(runInfo& rInfo, char* runConfig){
 	}
 	else{
 	  thisDevice.calibrationConstant = 1.0;
+	}
+	if(subtree.second.get_child_optional("filter_length")){
+	  thisDevice.filterLength = subtree.second.get<int>("filter_length");
+	}
+	else if(thisDevice.moduleType == string("struck")){
+	  thisDevice.filterLength = 5;
+	}
+	else{
+	  thisDevice.filterLength = 10;
 	}
 	if(subtree.second.get_child_optional("polarity")){
 	  thisDevice.neg = true;
@@ -660,12 +670,13 @@ void crunchDRS(vector< vector<drs> >& data,
       //UShort_t laserRun = flResults[i][1]; //in lab we only have laser runs
       UShort_t laserRun = 1;
       double fTrace[TRACELENGTH];
-      if((devices[j].name == "trigger0") || (devices[j].name == "trigger1")){
+      /* if((devices[j].name == "trigger0") || (devices[j].name == "trigger1")){
         filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 1);
       }
       else{
         filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, 10);  
-      }
+	}*/
+      filterTrace(data[i][devices[j].moduleNum].trace[devices[j].channel], fTrace, devices[j].filterLength);  
       fitDevice(fTrace,
 		drsR[i][j], 
 		*drsFitters[2*j+laserRun], devices[j]);
@@ -732,7 +743,7 @@ void crunchStruckS(vector< sis_slow >& data,
 	}
       }
       else{
-	if(devices[j].name == "slowMonitor"){
+	/*	if(devices[j].name == "slowMonitor"){
 	  double fTrace[TRACELENGTH];
 	  filterTrace(data[i].trace[devices[j].channel], fTrace, 1);
 	  fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
@@ -742,8 +753,10 @@ void crunchStruckS(vector< sis_slow >& data,
 	  double fTrace[TRACELENGTH];
 	  filterTrace(data[i].trace[devices[j].channel], fTrace, 5);
 	  fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
-	}
-	
+	  }*/
+	double fTrace[TRACELENGTH];
+	filterTrace(data[i].trace[devices[j].channel], fTrace, devices[j].filterLength);
+	fitDevice(fTrace,srSlow[i][j], *slFitters[2*j], devices[j]);
       }
     }
   }
