@@ -19,19 +19,19 @@ class for fitting traces
 */
 class pulseFitter{
 public:
-  pulseFitter(char* config=(char*)"configs/.defaultConfig.json");
+  pulseFitter(const std::string& config="configs/.defaultConfig.json");
   ~pulseFitter();
   
   /*attempts to fit trace with a single pulse.
     Error is the uncertainty on each point in the trace (right now this only works if all errors are the same) */
-  double fitSingle(double* const trace, double error = 1);
-  double fitSingle(unsigned short* const trace, double error = 1);
-  double fitSingle(float* const trace, double error = 1);
+  double fitSingle(const double* trace, double error = 1);
+  double fitSingle(const unsigned short* trace, double error = 1);
+  double fitSingle(const float* trace, double error = 1);
 
   //same as above, except for a double pulse fit.
-  double fitDouble(double* const trace, double error = 1);
-  double fitDouble(unsigned short* const trace, double error = 1);
-  double fitDouble(float* const trace, double error = 1);
+  double fitDouble(const double* trace, double error = 1);
+  double fitDouble(const unsigned short* trace, double error = 1);
+  double fitDouble(const float* trace, double error = 1);
 
   //get various fit results. Do not call these without doing a fit first
   double getNParameters() const { return func.getNParameters(); }
@@ -55,20 +55,20 @@ public:
   std::string getFitType() const { return fitType; }
 
   //to get analogue sum without doing a fit first
-  double getSum(double* const trace, int start, int length);
-  double getSum(unsigned short* const trace, int start, int length);
-  double getSum(float* const trace, int start, int length);
+  double getSum(const double* trace, int start, int length);
+  double getSum(const unsigned short* trace, int start, int length);
+  double getSum(const float* trace, int start, int length);
   
   //analogue sum using currently stored trace and baseline info
   double getSum(int start, int length);
 
   //to get max/min of trace in certain range without doing a fit first
-  double getMax(double* const trace, int start, int length);
-  double getMax(unsigned short* const trace, int start, int length);
-  double getMax(float* const trace, int start, int length);
-  double getMin(double* const trace, int start, int length);
-  double getMin(unsigned short* const trace, int start, int length);
-  double getMin(float* const trace, int start, int length);
+  double getMax(const double* trace, int start, int length);
+  double getMax(const unsigned short* trace, int start, int length);
+  double getMax(const float* trace, int start, int length);
+  double getMin(const double* trace, int start, int length);
+  double getMin(const unsigned short* trace, int start, int length);
+  double getMin(const float* trace, int start, int length);
 
   //max/min using currently stored trace and baseline info
   double getMax(int start, int length);
@@ -90,13 +90,13 @@ private:
   /* the function that the pulseFitter uses to fit traces (with the defined () operator)  */
   class pulseFitFunction {
   public:
-    pulseFitFunction(char* config);
+    pulseFitFunction(const std::string& config);
     ~pulseFitFunction();
     double operator() (double* x, double* p);
     double chi2Function(const double* p);
   
     //returns number of good data points in the range
-    int setTrace(double* const trace);
+    int setTrace(const double* trace);
   
     //setters to update fit length and start dynamically
     void setFitStart(int start) {pulseFitStart = start;}
@@ -161,7 +161,7 @@ private:
     bool separateBaselineFit;
     bool isDoubleFit;
 
-    double* currentTrace;
+    const double* currentTrace;
 
     std::vector<bool> isGoodPoint;
     int traceLength, pulseFitStart, fitLength;
@@ -180,7 +180,7 @@ private:
   ROOT::Math::Minimizer* min; 
   ROOT::Math::Functor functor;
 
-  double fitPulse(double* const trace, double error, 
+  double fitPulse(const double* trace, double error, 
 		  bool isSingleFit);
 
   std::vector<double> xPoints;

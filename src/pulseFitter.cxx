@@ -40,7 +40,7 @@ using namespace std;
 
 //Constructor for the pulseFitFunctionClass:
 //must be constructed with a valid config file 
-pulseFitter::pulseFitFunction::pulseFitFunction(char* config){ 
+pulseFitter::pulseFitFunction::pulseFitFunction(const std::string& config){ 
 
   //read in the config file and initialize some member variables
   boost::property_tree::ptree conf;
@@ -111,7 +111,7 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
 }
 
 //constructor for the pulseFitter class, must be constructed with a config file
-pulseFitter::pulseFitter(char* config):
+pulseFitter::pulseFitter(const std::string& config):
   func(config),
   functor(&func, &pulseFitter::pulseFitFunction::chi2Function, func.getNParameters())
 {
@@ -192,13 +192,13 @@ pulseFitter::~pulseFitter(){
 }
 
 //tries to fit a double pulse 
-double pulseFitter::fitDouble(double* const trace, double error){
+double pulseFitter::fitDouble(const double* trace, double error){
   func.setDoubleFit(true);
   return fitPulse(trace, error, false);
 }
 
 //overloaded to work with unsigned shorts
-double pulseFitter::fitDouble(unsigned short* const trace, double error){
+double pulseFitter::fitDouble(const unsigned short* trace, double error){
   for (int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -208,7 +208,7 @@ double pulseFitter::fitDouble(unsigned short* const trace, double error){
 }
 
 //overloaded to work with floats
-double pulseFitter::fitDouble(float* const trace, double error){
+double pulseFitter::fitDouble(const float* trace, double error){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -218,13 +218,13 @@ double pulseFitter::fitDouble(float* const trace, double error){
 }
 
 //tries to fit a single pulse
-double pulseFitter::fitSingle(double* const trace, double error){
+double pulseFitter::fitSingle(const double* trace, double error){
   func.setDoubleFit(false);
   return fitPulse(trace, error, true); 
 }
 
 //overloaded for unsigned shorts
-double pulseFitter::fitSingle(float* const trace, double error){
+double pulseFitter::fitSingle(const float* trace, double error){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -234,7 +234,7 @@ double pulseFitter::fitSingle(float* const trace, double error){
 }
 
 //overloaded for floats
-double pulseFitter::fitSingle(unsigned short* const trace, double error){
+double pulseFitter::fitSingle(const unsigned short* trace, double error){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -244,7 +244,7 @@ double pulseFitter::fitSingle(unsigned short* const trace, double error){
 }
 
 //function that sets initial parameters for ROOT fitter and then calls the fitter
-double pulseFitter::fitPulse(double* const trace, double error, 
+double pulseFitter::fitPulse(const double* trace, double error, 
 			     bool isSingleFit){ 
   assert(isFitConfigured());
   func.setError(error);  
@@ -367,14 +367,14 @@ double pulseFitter::getIntegral(double start, double length) const{
 //take the baseline corrected sum of digitized points in specified range
 //this function is a wrapper that serves to pass the trace information to
 //the pulseFitFunction
-double pulseFitter::getSum(double* const trace, int start, int length){
+double pulseFitter::getSum(const double* trace, int start, int length){
   func.setTrace(trace);
   func.findBaseline();
   return func.evalSum(start, length);
 }
 
 //overloaded to work with unsigned shorts
-double pulseFitter::getSum(unsigned short* const trace, int start, int length){
+double pulseFitter::getSum(const unsigned short* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -383,7 +383,7 @@ double pulseFitter::getSum(unsigned short* const trace, int start, int length){
 }
 
 //overloaded to work with floats
-double pulseFitter::getSum(float* const trace, int start, int length){
+double pulseFitter::getSum(const float* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -409,14 +409,14 @@ double pulseFitter::pulseFitFunction::evalSum(int start, int length){
 }
 
 //return max of trace in given range
-double pulseFitter::getMax(double* const trace, int start, int length){
+double pulseFitter::getMax(const double* trace, int start, int length){
   func.setTrace(trace);
   func.findBaseline();
   return func.findMax(start, length);
 }
 
 //overloaded to work with unsigned shorts
-double pulseFitter::getMax(unsigned short* const trace, int start, int length){
+double pulseFitter::getMax(const unsigned short* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -425,7 +425,7 @@ double pulseFitter::getMax(unsigned short* const trace, int start, int length){
 }
 
 //overloaded to work with floats
-double pulseFitter::getMax(float* const trace, int start, int length){
+double pulseFitter::getMax(const float* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -449,7 +449,7 @@ double pulseFitter::pulseFitFunction::findMax(int start, int length){
 } 
 
 //return min of trace in given range
-double pulseFitter::getMin(double* const trace, int start, int length){
+double pulseFitter::getMin(const double* trace, int start, int length){
   func.setTrace(trace);
   func.findBaseline();
 
@@ -457,7 +457,7 @@ double pulseFitter::getMin(double* const trace, int start, int length){
 }
 
 //overloaded to work with unsigned shorts
-double pulseFitter::getMin(unsigned short* const trace, int start, int length){
+double pulseFitter::getMin(const unsigned short* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -466,7 +466,7 @@ double pulseFitter::getMin(unsigned short* const trace, int start, int length){
 }
 
 //overloaded to work with floats
-double pulseFitter::getMin(float* const trace, int start, int length){
+double pulseFitter::getMin(const float* trace, int start, int length){
   for(int i = 0; i < func.getTraceLength(); ++i){
     doubleTrace[i] = static_cast<double>(trace[i]);
   }
@@ -498,7 +498,7 @@ void pulseFitter::fillFitTrace(double* fitTrace, int start, int length){
 }
 
 //attach trace to the pulseFitFunction
-int pulseFitter::pulseFitFunction::setTrace(double* const trace){
+int pulseFitter::pulseFitFunction::setTrace(const double* trace){
   currentTrace = trace;
   return checkPoints();
 }
