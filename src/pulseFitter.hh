@@ -147,7 +147,7 @@ private:
     double beamSource(double t, double t0);
     double laserSource(double t, double t0);
     double templateFit(double t, double t0);
-    
+    double evalTemplate2(double t, double t0);
 
     double sampleRate;
  
@@ -171,7 +171,9 @@ private:
     int nPoints; //number of points used in the fit
 
     TFile* templateFile;
+    TFile* templateFile2;
     TSpline3* templateSpline;
+    TSpline3* templateSpline2;
     double templateLength;
     double templateBuffer;
   };  

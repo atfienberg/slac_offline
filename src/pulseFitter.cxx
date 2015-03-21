@@ -63,6 +63,8 @@ pulseFitter::pulseFitFunction::pulseFitFunction(const std::string& config){
   baseline = 0;
   templateFile = NULL;
   templateSpline = NULL;
+  templateSpline2 = NULL;
+  templateFile2 = NULL;
   isGoodPoint.resize(fitLength);  
 
   bool fitConfigured = fitConfig.get<bool>("fit");
@@ -92,6 +94,12 @@ pulseFitter::pulseFitFunction::pulseFitFunction(const std::string& config){
     templateLength = fitConfig.get<int>("template_length");
     templateFile = new TFile(tempFile.c_str());
     templateSpline = (TSpline3*)templateFile->Get("masterSpline");
+    //if a second template exists:
+    if(fitConfig.get_child_optional("template_file_2")){
+      string tempFile2 = fitConfig.get<string>("template_file_2");
+      templateFile = new TFile(tempFile2.c_str());
+      templateSpline2 = (TSpline3*)templateFile->Get("masterSpline");
+    }
   }
   
   else {
@@ -107,6 +115,11 @@ pulseFitter::pulseFitFunction::~pulseFitFunction(){
     delete templateSpline;
     templateFile->Close();
     delete templateFile;
+  }
+  if(templateFile2!=NULL){
+    delete templateSpline2;
+    templateFile2->Close();
+    delete templateFile2;
   }
 }
 
@@ -514,8 +527,14 @@ double pulseFitter::pulseFitFunction::operator() (double* x, double* p){
   double pulse;
  
   pulse = scale*evalPulse(x[0], p[0]);
-  if(isDoubleFit)
-    pulse = pulse + pileUpScale*evalPulse(x[0], p[0]+p[1]); 
+  if(isDoubleFit){
+    if(templateSpline2 == NULL){
+      pulse = pulse + pileUpScale*evalPulse(x[0], p[0]+p[1]); 
+    }
+    else{
+      pulse = pulse + pileUpScale*evalTemplate2(x[0], p[0] + p[1]);
+    }
+  }
   
   pulse = pulse + baseline;
 
@@ -638,8 +657,14 @@ void pulseFitter::pulseFitFunction::updateScaleandPedestal(){
   else{
     vector<double> t2(fitLength);
     for(int i = 0; i < fitLength; ++i){
-      if(isGoodPoint[i])
-	t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]); 
+      if(isGoodPoint[i]){
+	if(templateSpline2==NULL){
+	  t2[i] = evalPulse(pulseFitStart+i,lpg[0]+lpg[1]);
+	}
+	else{
+	  t2[i] = evalTemplate2(pulseFitStart+i, lpg[0] + lpg[1]);
+	}
+      }
       else
 	t2[i] = 0;
     }
@@ -775,6 +800,15 @@ double pulseFitter::pulseFitFunction::templateFit(double t, double t0){
   if((1/lpg[2])*(t-t0) > -1*templateBuffer && 
      (1/lpg[2])*(t-t0) < (templateLength-templateBuffer)) {
     return templateSpline->Eval( (1/lpg[2]) * (t - t0));
+  }
+  else
+    return 0;
+}
+
+double pulseFitter::pulseFitFunction::evalTemplate2(double t, double t0){
+  if((1/lpg[2])*(t-t0) > -1*templateBuffer && 
+     (1/lpg[2])*(t-t0) < (templateLength-templateBuffer)) {
+    return templateSpline2->Eval( (1/lpg[2]) * (t - t0));
   }
   else
     return 0;
